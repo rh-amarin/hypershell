@@ -1,0 +1,37 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+# Standalone Keycloak-only overlay used by scripts/kind/up.sh to apply
+# Keycloak early (before cert-manager and Gateway CRDs are installed) so it
+# boots in parallel with infrastructure setup.  The main kind-up kustomize
+# apply (deploy/kind-keycloak-optimized) re-applies the same spec later and
+# is a no-op for these resources.
+resources:
+  - ../../base/keycloak
+patches:
+  - patch: |
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: keycloak
+        namespace: keycloak
+      spec:
+        template:
+          spec:
+            containers:
+              - name: keycloak
+                args:
+                  - start
+                  - --optimized
+                  - --import-realm
+                resources:
+                  requests:
+                    cpu: 1000m
+                env:
+                  - name: KC_HTTP_ENABLED
+                    value: "true"
+                  - name: KC_CACHE
+                    value: "local"
+images:
+  - name: quay.io/keycloak/keycloak
+    newName: localhost/hypershell-keycloak
+    newTag: dev-optimized

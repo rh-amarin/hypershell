@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+start=$(date +%s)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=lib.sh
 source "${SCRIPT_DIR}/lib.sh"
@@ -27,7 +28,10 @@ else
     # are guarded with `|| warn`), and port forwarding is left unconfigured.
     # The loop refreshes every 50s and exits on its own once this script ($$)
     # is gone, so no EXIT trap (which the seeding step below rebinds) is needed.
-    ( while kill -0 "$$" 2>/dev/null; do sudo -n -v 2>/dev/null || exit; sleep 50; done ) &
+    (while kill -0 "$$" 2>/dev/null; do
+      sudo -n -v 2>/dev/null || exit
+      sleep 50
+    done) &
   else
     warn "sudo unavailable - will use kubectl port-forward as fallback"
     HAVE_SUDO=false
@@ -45,20 +49,21 @@ export PATH="${REPO_ROOT}/bin:${PATH}"
 
 # --- Cluster creation (idempotent) ---
 header "Cluster"
+_t=$(date +%s)
 if cluster_exists; then
   warn "Cluster '${KIND_CLUSTER_NAME}' already exists, reusing"
 else
   info "Creating Kind cluster '${KIND_CLUSTER_NAME}'..."
   rendered=$(mktemp /tmp/kind-config-XXXXXX)
   sed "s|__KIND_HOST_MOUNT_PATH__|${KIND_HOST_MOUNT_PATH:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}|g" \
-    "${KIND_CONFIG}" > "${rendered}"
+    "${KIND_CONFIG}" >"${rendered}"
   kind create cluster --name "${KIND_CLUSTER_NAME}" --config "${rendered}"
   rm -f "${rendered}"
   success "Cluster created"
 fi
 
 # --- Set kubectl context and wait for API server ---
-kube cluster-info >/dev/null 2>&1 || \
+kube cluster-info >/dev/null 2>&1 ||
   kubectl config use-context "$(kctx)"
 
 info "Waiting for Kubernetes API server..."
@@ -67,10 +72,12 @@ for i in $(seq 1 15); do
   info "API server not ready, retrying (${i}/15)..."
   sleep 2
 done
+echo $(($(date +%s) - _t)) seconds
 echo ""
 
 # --- Verify and start cloud-provider-kind ---
 header "cloud-provider-kind"
+_t=$(date +%s)
 CPK_RUNNING=false
 
 # Returns 0 if a running cloud-provider-kind can still enumerate the kind
@@ -103,8 +110,10 @@ start_cpk() {
   fi
 
   info "Starting cloud-provider-kind..."
-  if nohup cloud-provider-kind --enable-lb-port-mapping >"${CPK_LOG}" 2>&1 &
-     sleep 2 && pgrep -f "cloud-provider-kind" >/dev/null 2>&1; then
+  if
+    nohup cloud-provider-kind --enable-lb-port-mapping >"${CPK_LOG}" 2>&1 &
+    sleep 2 && pgrep -f "cloud-provider-kind" >/dev/null 2>&1
+  then
     CPK_RUNNING=true
     record_cpk_sha "$(cpk_expected_sha)"
     success "cloud-provider-kind started (without sudo)"
@@ -170,10 +179,91 @@ elif pgrep -f "cloud-provider-kind" >/dev/null 2>&1; then
 else
   start_cpk
 fi
+echo $(($(date +%s) - _t)) seconds
+echo ""
+
+# --- Build optimized Keycloak image (optional) ---
+# Resolved before infrastructure so the Keycloak early-apply below can use
+# the right image and kustomize overlay before cert-manager or Gateway CRDs
+# are installed.
+KUSTOMIZE_DIR="deploy/kind"
+KC_KUSTOMIZE_DIR="deploy/base/keycloak"
+if [[ "${KIND_KEYCLOAK_OPTIMIZED:-false}" == "true" ]]; then
+  header "Keycloak (optimized)"
+  _t=$(date +%s)
+  KC_IMAGE="${keycloak_local:-localhost/hypershell-keycloak:dev-optimized}"
+  if ${CONTAINER_ENGINE} image inspect "${KC_IMAGE}" >/dev/null 2>&1; then
+    info "Image ${KC_IMAGE} already exists, reusing (run 'make kind-keycloak-build' to rebuild)"
+  else
+    info "Building optimized Keycloak image..."
+    ${CONTAINER_ENGINE} build -t "${KC_IMAGE}" "${REPO_ROOT}/deploy/kind/keycloak"
+  fi
+  # Load Keycloak and the CNPG PostgreSQL image into Kind in parallel.
+  # Sending both saves/loads concurrently means the slower one (CNPG at
+  # ~300 MB) does not block the faster one, and we pay only max(Kc, CNPG)
+  # instead of the sum. The CNPG pre-load eliminates the cold registry pull
+  # that otherwise accounts for ~20-25 s of the CNPG cluster wait later.
+  info "Loading images into Kind (parallel)..."
+  _preload_pids=()
+  _preload_logs=()
+
+  _kc_log=$(mktemp /tmp/hypershell-kind-load-XXXXXX)
+  _preload_logs+=("${_kc_log}")
+  ( kind_load_image "${KC_IMAGE}" ) >"${_kc_log}" 2>&1 &
+  _preload_pids+=($!)
+
+  # Pre-load the PostgreSQL image CNPG will use for the cluster pod so the
+  # kubelet finds it cached and skips the registry pull (~20-25 s savings).
+  # Use HYPERSHELL_DATABASE_IMAGE when set (it controls the cluster spec too);
+  # fall back to CNPG's compiled-in default for the pinned CNPG_VERSION.
+  # Update the fallback tag alongside CNPG_VERSION in the Makefile; derive it
+  # from a running cluster: kubectl get cluster -o jsonpath='{.spec.imageName}'
+  _cnpg_pg_image="${HYPERSHELL_DATABASE_IMAGE:-ghcr.io/cloudnative-pg/postgresql:18.4-system-trixie}"
+  info "Pre-loading CNPG PostgreSQL image (${_cnpg_pg_image})..."
+  _cnpg_log=$(mktemp /tmp/hypershell-kind-load-XXXXXX)
+  _preload_logs+=("${_cnpg_log}")
+  (
+    ${CONTAINER_ENGINE} pull "${_cnpg_pg_image}" >/dev/null 2>&1 || true
+    kind_load_image "${_cnpg_pg_image}"
+  ) >"${_cnpg_log}" 2>&1 &
+  _preload_pids+=($!)
+
+  _preload_ok=true
+  for _pid in "${_preload_pids[@]}"; do
+    wait "${_pid}" || _preload_ok=false
+  done
+  for _log in "${_preload_logs[@]}"; do
+    cat "${_log}" 2>/dev/null || true
+    rm -f "${_log}"
+  done
+  if [[ "${_preload_ok}" == "true" ]]; then
+    success "Images loaded into Kind"
+  else
+    warn "One or more image loads failed - images will be pulled from registry on first run"
+  fi
+  KUSTOMIZE_DIR="deploy/kind-keycloak-optimized"
+  KC_KUSTOMIZE_DIR="deploy/kind-keycloak-optimized/keycloak-only"
+  echo $(($(date +%s) - _t)) seconds
+  echo ""
+else
+  info "Keycloak optimization disabled (KIND_KEYCLOAK_OPTIMIZED=false), using stock image"
+  echo ""
+fi
+
+# --- Start Keycloak (boots in parallel with infrastructure) ---
+# Keycloak has no dependency on cert-manager or Gateway CRDs, so apply it
+# now and let it boot while the ~31 s infrastructure install runs below.
+header "Keycloak"
+_t=$(date +%s)
+info "Applying Keycloak manifests..."
+kustomize build "${KC_KUSTOMIZE_DIR}" | kube apply -f -
+success "Keycloak manifests applied (booting in parallel with infrastructure)"
+echo $(($(date +%s) - _t)) seconds
 echo ""
 
 # --- Install infrastructure prerequisites via kustomize ---
 header "Infrastructure"
+_t=$(date +%s)
 # Kubernetes 1.33+ may pre-install Gateway API CRDs whose storedVersions
 # contain API versions the experimental bundle no longer serves (e.g. v1 for
 # TCPRoute/UDPRoute).  Delete them first so the apply can re-create them
@@ -195,7 +285,7 @@ for crd in tcproutes.gateway.networking.k8s.io udproutes.gateway.networking.k8s.
   kube wait --for=delete crd/"$crd" --timeout=30s 2>/dev/null || true
 done
 info "Installing CRDs and controllers (cert-manager, Gateway API, Agent Sandbox)..."
-kustomize build --load-restrictor=LoadRestrictionsNone deploy/kind/infrastructure | \
+kustomize build --load-restrictor=LoadRestrictionsNone deploy/kind/infrastructure |
   kube apply --server-side --force-conflicts -f -
 info "Waiting for cert-manager..."
 kube wait --for=condition=available deployment/cert-manager -n cert-manager --timeout=120s
@@ -205,14 +295,17 @@ kube wait --for=condition=available deployment/agent-sandbox-controller -n agent
 info "Waiting for CNPG operator..."
 kube wait --for=condition=available deployment/cnpg-controller-manager -n cnpg-system --timeout=120s
 success "Infrastructure ready"
+echo $(($(date +%s) - _t)) seconds
 echo ""
 
 # --- Build and load local images (offline mode) ---
 FORCE_ROLLOUT=""
 if [[ "${LOCAL_IMAGES:-}" == "true" ]]; then
   header "Local Images"
+  _t=$(date +%s)
   "${SCRIPT_DIR}/build-images.sh"
   FORCE_ROLLOUT=true
+  echo $(($(date +%s) - _t)) seconds
   echo ""
 fi
 
@@ -224,7 +317,8 @@ fi
 # --- Apply pull secret (if configured) ---
 if [[ -n "${KIND_PULL_SECRET:-}" ]]; then
   header "Pull Secret"
-  kube create namespace "${KIND_NAMESPACE}" --dry-run=client -o yaml | \
+  _t=$(date +%s)
+  kube create namespace "${KIND_NAMESPACE}" --dry-run=client -o yaml |
     kube apply -f -
   info "Applying pull secret from ${KIND_PULL_SECRET}..."
   kube apply -f "${KIND_PULL_SECRET}" -n "${KIND_NAMESPACE}"
@@ -239,11 +333,13 @@ if [[ -n "${KIND_PULL_SECRET:-}" ]]; then
     kube patch serviceaccount default -n "${KIND_NAMESPACE}" \
       -p "{\"imagePullSecrets\":[{\"name\":\"${SECRET_NAME}\"}]}"
   fi
+  echo $(($(date +%s) - _t)) seconds
   echo ""
 fi
 
 # --- OIDC session secret (must exist before kustomize apply) ---
 header "OIDC Secrets"
+_t=$(date +%s)
 kube create namespace "${KIND_NAMESPACE}" --dry-run=client -o yaml | kube apply -f -
 info "Creating OIDC session secret..."
 SESSION_SECRET=$(openssl rand -hex 32)
@@ -252,16 +348,18 @@ kube create secret generic hypershell-oidc-session \
   --from-literal=session-secret="${SESSION_SECRET}" \
   --dry-run=client -o yaml | kube apply -f -
 success "OIDC session secret created"
+echo $(($(date +%s) - _t)) seconds
 echo ""
 
 # --- Deploy all components via kustomize ---
 header "Deploying Components"
+_t=$(date +%s)
 if [[ "${LOCAL_IMAGES:-}" == "true" ]]; then
   info "Applying Kind manifests with localhost image refs..."
   _kustomize_dir="deploy/.local-images"
   mkdir -p "${_kustomize_dir}"
   _registry="${IMAGE_REGISTRY:-quay.io/redhat-services-prod/hcm-eng-prod-tenant/hypershell-main}"
-  cat > "${_kustomize_dir}/kustomization.yaml" <<EOF
+  cat >"${_kustomize_dir}/kustomization.yaml" <<EOF
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
@@ -281,7 +379,7 @@ EOF
   rm -rf "${_kustomize_dir}"
 else
   info "Applying Kind manifests via kustomize..."
-  kustomize build deploy/kind | kube apply -f -
+  kustomize build "${KUSTOMIZE_DIR}" | kube apply -f -
 fi
 
 if [[ -n "${HYPERSHELL_DATABASE_IMAGE:-}" ]]; then
@@ -289,15 +387,12 @@ if [[ -n "${HYPERSHELL_DATABASE_IMAGE:-}" ]]; then
   kube patch cluster/hypershell-db -n "${KIND_NAMESPACE}" --type merge \
     -p "{\"spec\":{\"imageName\":\"${HYPERSHELL_DATABASE_IMAGE}\"}}"
 fi
+
 info "Waiting for CNPG clusters..."
 kube wait --for=condition=Ready cluster/hypershell-db -n "${KIND_NAMESPACE}" --timeout=300s
 success "CNPG clusters ready"
 
-if [[ -z "${KIND_KEYCLOAK_URL:-}" ]]; then
-  info "Waiting for Keycloak..."
-  kube wait --for=condition=available deployment/keycloak -n keycloak --timeout=180s
-  success "Keycloak ready"
-fi
+echo $(($(date +%s) - _t)) seconds
 
 # --- Jaeger (optional, for OTel trace inspection) ---
 # Deploys an all-in-one Jaeger v2 for local trace inspection alongside the API
@@ -364,6 +459,7 @@ api_server_otel_endpoint_set() {
 
 if [[ "${KIND_JAEGER:-}" == "true" ]]; then
   header "Jaeger"
+  _t=$(date +%s)
   info "Deploying Jaeger..."
   render_jaeger | kube apply -f -
   info "Patching web console BFF with OTEL_EXPORTER_OTLP_ENDPOINT..."
@@ -385,6 +481,7 @@ if [[ "${KIND_JAEGER:-}" == "true" ]]; then
   info "Waiting for Jaeger..."
   kube wait --for=condition=available deployment/jaeger -n "${KIND_NAMESPACE}" --timeout=120s
   success "Jaeger ready"
+  echo $(($(date +%s) - _t)) seconds
   echo ""
 else
   # Reconcile the disabled state, do not create-or-skip: a cluster brought up
@@ -433,6 +530,7 @@ fi
 # as SSL_CERT_FILE so OIDC discovery over HTTPS succeeds
 # (see specs/platform/openshell-gateway-tls.spec.md).
 header "Gateway Trusted CA"
+_t=$(date +%s)
 info "Waiting for hypershell-https-tls certificate to be issued..."
 CA_PEM=""
 for _ in $(seq 1 30); do
@@ -449,6 +547,31 @@ if [[ -n "${CA_PEM}" ]]; then
 else
   warn "hypershell-https-tls has no ca.crt yet - gateway OIDC over HTTPS may fail"
 fi
+echo $(($(date +%s) - _t)) seconds
+echo ""
+
+# --- Wait for Keycloak ---
+# Keycloak has been booting since before infrastructure was installed
+# (~60-120 s of overlap). Wait for it now, just before the API server
+# restart that needs JWKS to be served.
+header "Keycloak"
+_t=$(date +%s)
+if [[ -z "${KIND_KEYCLOAK_URL:-}" ]]; then
+  info "Waiting for Keycloak..."
+  kube wait --for=condition=available deployment/keycloak -n keycloak --timeout=180s
+  success "Keycloak ready"
+  # Reduce CPU request in-place now that startup is done (k8s 1.29+ in-place
+  # pod resize). The Deployment keeps 1000m so any future pod restart gets the
+  # full allocation for fast startup again.
+  KC_POD=$(kube get pod -n keycloak -l app=keycloak \
+    -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true)
+  if [[ -n "${KC_POD}" ]]; then
+    kube patch pod "${KC_POD}" -n keycloak --subresource=resize --type=merge \
+      -p '{"spec":{"containers":[{"name":"keycloak","resources":{"requests":{"cpu":"200m"}}}]}}' \
+      2>/dev/null && info "Keycloak CPU request reduced to 200m (in-place)" || true
+  fi
+fi
+echo $(($(date +%s) - _t)) seconds
 echo ""
 
 # The API server enforces JWT and loads Keycloak's JWKS at startup. If it
@@ -517,18 +640,17 @@ if [[ -n "${_api_img}" || -n "${_cp_img}" || -n "${_wc_img}" ]]; then
   fi
 fi
 
-
 if [[ "${FORCE_ROLLOUT}" == "true" ]]; then
   info "Rolling out non-swapped deployments to pick up rebuilt images..."
   for pair in "hypershell-api-server:api-server" \
-              "hypershell-controller:control-plane" \
-              "hypershell-web-console:web-console"; do
+    "hypershell-controller:control-plane" \
+    "hypershell-web-console:web-console"; do
     dep="${pair%%:*}"
     comp="${pair##*:}"
     if ! is_swapped "${comp}"; then
       case "${dep}" in
-        hypershell-api-server)  [[ -n "${_api_restarted}" ]] && continue ;;
-        hypershell-controller)  [[ -n "${_cp_restarted}" ]]  && continue ;;
+      hypershell-api-server) [[ -n "${_api_restarted}" ]] && continue ;;
+      hypershell-controller) [[ -n "${_cp_restarted}" ]] && continue ;;
       esac
       kube rollout restart "deployment/${dep}" -n "${KIND_NAMESPACE}"
     fi
@@ -538,6 +660,7 @@ echo ""
 
 # --- Gateway address discovery ---
 header "TLS & Networking"
+_t=$(date +%s)
 
 GATEWAY_PORT=""
 if [[ "${CPK_RUNNING}" == "true" ]]; then
@@ -546,7 +669,7 @@ if [[ "${CPK_RUNNING}" == "true" ]]; then
     GW_ADDR=$(kube get gateway hypershell-gw -n "${KIND_NAMESPACE}" \
       -o jsonpath='{.status.addresses[0].value}' 2>/dev/null || true)
     if [[ -n "${GW_ADDR}" ]]; then break; fi
-    if (( i % 5 == 0 )); then
+    if ((i % 5 == 0)); then
       info "Gateway not ready yet (${i}/30)... is cloud-provider-kind running?"
     fi
     sleep 2
@@ -604,9 +727,9 @@ if [[ -n "${GATEWAY_PORT:-}" ]] && [[ -n "${GW_ADDR:-}" ]] && [[ -z "${PORT_FORW
   info "Routing in-cluster port ${GATEWAY_PORT} to gateway port 443..."
   ${CONTAINER_ENGINE} exec "${KIND_CLUSTER_NAME}-control-plane" \
     iptables -t nat -C PREROUTING -p tcp -d "${GW_ADDR}" --dport "${GATEWAY_PORT}" \
-      -j DNAT --to-destination "${GW_ADDR}:443" 2>/dev/null || \
-  ${CONTAINER_ENGINE} exec "${KIND_CLUSTER_NAME}-control-plane" \
-    iptables -t nat -A PREROUTING -p tcp -d "${GW_ADDR}" --dport "${GATEWAY_PORT}" \
+    -j DNAT --to-destination "${GW_ADDR}:443" 2>/dev/null ||
+    ${CONTAINER_ENGINE} exec "${KIND_CLUSTER_NAME}-control-plane" \
+      iptables -t nat -A PREROUTING -p tcp -d "${GW_ADDR}" --dport "${GATEWAY_PORT}" \
       -j DNAT --to-destination "${GW_ADDR}:443"
   success "In-cluster OIDC routing: ${GW_ADDR}:${GATEWAY_PORT} -> ${GW_ADDR}:443"
 fi
@@ -632,10 +755,12 @@ if [[ -n "${PORT_SUFFIX}" ]]; then
       OIDC_REDIRECT_URI="https://${CONSOLE_HOSTNAME}${PORT_SUFFIX}/auth/callback"
   fi
 fi
+echo $(($(date +%s) - _t)) seconds
 echo ""
 
 # --- Wait for readiness ---
 header "Readiness"
+_t=$(date +%s)
 # Use `rollout status`, not `wait --for=condition=available`. With replicas=1
 # and the default rolling update the Deployment stays Available throughout a
 # rollout (the old pod keeps serving until the new one is Ready), so
@@ -656,15 +781,20 @@ success "Control plane ready"
 info "Waiting for web console..."
 kube rollout status deployment/hypershell-web-console -n "${KIND_NAMESPACE}" --timeout=120s
 success "Web console ready"
+echo $(($(date +%s) - _t)) seconds
 echo ""
 
 # --- Seed Gateway via REST API ---
 header "Gateway Provisioning"
+_t=$(date +%s)
 API_URL="http://localhost:8000"
 info "Port-forwarding to API server..."
 kube port-forward svc/hypershell-api-server -n "${KIND_NAMESPACE}" 8000:8000 >/dev/null 2>&1 &
 PF_PID=$!
-cleanup_pf() { kill "${PF_PID}" 2>/dev/null || true; wait "${PF_PID}" 2>/dev/null || true; }
+cleanup_pf() {
+  kill "${PF_PID}" 2>/dev/null || true
+  wait "${PF_PID}" 2>/dev/null || true
+}
 trap cleanup_pf EXIT
 
 # `port-forward` accepts a local TCP connection before it has confirmed the pod
@@ -933,20 +1063,25 @@ fi
 
 cleanup_pf
 trap - EXIT
+echo $(($(date +%s) - _t)) seconds
 echo ""
 
 # --- kubectl port-forward (no cloud-provider-kind fallback) ---
 if [[ "${CPK_RUNNING}" == "false" ]]; then
   header "kubectl Port Forwarding"
+  _t=$(date +%s)
   start_kubectl_port_forwards
+  echo $(($(date +%s) - _t)) seconds
   echo ""
 fi
 
 # --- DNS resolution ---
 header "DNS"
+_t=$(date +%s)
 start_dns
 setup_resolver
 success "DNS configured - *.hypershell.localhost resolves to 127.0.0.1"
+echo $(($(date +%s) - _t)) seconds
 echo ""
 
 # --- Summary banner ---
@@ -1006,3 +1141,4 @@ echo ""
 info "API Server Logs:    kubectl logs -f -l app=hypershell-api-server -n ${KIND_NAMESPACE}"
 info "Control Plane Logs: kubectl logs -f -l app=hypershell-controller -n ${KIND_NAMESPACE}"
 info "Web Console Logs:   kubectl logs -f -l app=hypershell-web-console -n ${KIND_NAMESPACE}"
+echo $(($(date +%s) - start)) seconds

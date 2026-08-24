@@ -374,3 +374,21 @@ stop_port_forward() {
       ;;
   esac
 }
+
+# --- Image loading ---
+
+# Load a container image into the Kind cluster using the fastest available
+# method: docker natively (kind load docker-image skips the tar roundtrip);
+# podman via a temp tar archive (kind's podman provider has no native load).
+kind_load_image() {
+  local image="$1"
+  if [[ "$(basename "${CONTAINER_ENGINE}")" == "docker" ]]; then
+    kind load docker-image "${image}" --name "${KIND_CLUSTER_NAME}"
+  else
+    local _tar
+    _tar=$(mktemp /tmp/hypershell-kind-img-XXXXXX)
+    ${CONTAINER_ENGINE} save -o "${_tar}" "${image}"
+    kind load image-archive "${_tar}" --name "${KIND_CLUSTER_NAME}"
+    rm -f "${_tar}"
+  fi
+}
