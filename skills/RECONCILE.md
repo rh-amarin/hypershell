@@ -33,6 +33,7 @@ skills/
 ├── review/
 │   ├── amber-review/         # General code and security review
 │   ├── review-guidance/      # PR review checklists
+│   ├── spec-analyst/         # On-demand spec corpus analysis (commit-pinned report)
 │   └── ui-standards/         # UI audit and intent-driven recommendations
 └── tooling/
     ├── align/                # Convention compliance scoring
@@ -42,7 +43,7 @@ skills/
     └── update-openshell/     # Update to upstream OpenShell releases
 ```
 
-**SDLC flow**: `/reconcile` → `/spec` → `/full-stack-pipeline` → `/deploy-cluster` or `/dev-cluster`
+**SDLC flow**: `/reconcile` → `/spec` → `/full-stack-pipeline` → `/deploy-cluster` or `/dev-cluster`. On-demand spec quality: `/spec-analyst` (commit-pinned report; does not execute waves).
 
 ---
 

@@ -1,0 +1,114 @@
+{
+  "skill_name": "spec-analyst",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Run spec-analyst against the single fixture spec at skills/review/spec-analyst/evals/files/ambiguous.spec.md and report findings.",
+      "expected_output": "Should flag the `language` lens: 'Warmup Behavior' uses weasel words (appropriately, as needed, properly, reasonable, where applicable) and has no RFC 2119 normative keyword, and 'Readiness Signal' uses a passive silent actor ('the status is updated' -- by whom?). Neither requirement is verifiable.",
+      "files": ["evals/files/ambiguous.spec.md"],
+      "expectations": [
+        "Flags the `language` lens on 'Requirement: Warmup Behavior' for ambiguous/weasel wording (e.g. appropriately, as needed, properly, reasonable, where applicable)",
+        "Flags that at least one requirement contains no RFC 2119 normative keyword (SHALL/SHOULD/MAY)",
+        "Flags 'Readiness Signal' for passive voice with a missing actor and/or as unverifiable (no scenario or measurable outcome)",
+        "Each finding cites a concrete file:line or file § Requirement with an evidence quote",
+        "Does NOT raise a Blocker (these are Major/Minor language findings); verdict is ISSUES or HEALTHY, not UNSAFE_TO_RECONCILE"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Run spec-analyst across the two fixture specs skills/review/spec-analyst/evals/files/contradiction_a.spec.md and skills/review/spec-analyst/evals/files/contradiction_b.spec.md and report any contradictions between them.",
+      "expected_output": "Should flag the `contradiction` lens: for a routed gateway with no exposurePort, contradiction_a mandates external port 8080 while contradiction_b mandates target port 9090 for the same condition -- both are Active SHALLs that cannot both be desired state. This is a Blocker; verdict UNSAFE_TO_RECONCILE.",
+      "files": [
+        "evals/files/contradiction_a.spec.md",
+        "evals/files/contradiction_b.spec.md"
+      ],
+      "expectations": [
+        "Identifies a `contradiction` finding between the two specs over the default port for a gateway with no exposurePort (8080 vs 9090)",
+        "Names both conflicting states (state A: 8080, state B: 9090) and the shared precondition",
+        "Rates the contradiction as Blocker (two Active SHALLs that cannot both hold)",
+        "Sets the overall verdict to UNSAFE_TO_RECONCILE",
+        "Cites both files with evidence quotes"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Run spec-analyst against skills/review/spec-analyst/evals/files/broken_link.spec.md and report broken references.",
+      "expected_output": "Should flag the `links` lens: the Parent field points at openshell-nonexistent-parent.spec.md (does not exist), the body links to ./gateway-base-does-not-exist.spec.md (does not exist), and references a '§ Nonexistent Section Heading' anchor that does not exist. The link to api-server-observability.spec.md is only valid if that target resolves.",
+      "files": ["evals/files/broken_link.spec.md"],
+      "expectations": [
+        "Flags the `links` lens for the broken relative link to ./gateway-base-does-not-exist.spec.md",
+        "Flags the Parent field pointing at a nonexistent spec (openshell-nonexistent-parent.spec.md)",
+        "Flags the dangling section reference '§ Nonexistent Section Heading'",
+        "Rates broken cross-references at Critical (or Blocker if it would misdirect reconcile)",
+        "Each broken reference is cited with file:line"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "Run spec-analyst against skills/review/spec-analyst/evals/files/stale_fleet.spec.md and report stale references to removed domain concepts.",
+      "expected_output": "Should flag the `freshness` lens: this Active spec asserts Fleet, fleet_id, and Sector as current desired state, but the Fleet entity and fleet_id were removed from the domain model. A live spec asserting a deleted entity is a defect (Blocker per the removed-entity rule).",
+      "files": ["evals/files/stale_fleet.spec.md"],
+      "expectations": [
+        "Flags the `freshness` lens for stale references to the removed Fleet entity and fleet_id",
+        "Also flags the removed Sector concept",
+        "References that Fleet/fleet_id are absent from the current domain model (CLAUDE.md / domain history)",
+        "Rates the removed-entity reference as Blocker (a live Active spec asserting a deleted entity as current desired state)",
+        "Does NOT attempt to justify the references by scanning component source code (trace lens stays read-only against RECONCILE)"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "Run spec-analyst against skills/review/spec-analyst/evals/files/duplicate_ids.spec.md and report requirement-ID problems.",
+      "expected_output": "Should flag the `identity` lens: two requirements both use the ID UI-FND-01 (collision) and the numbering skips UI-FND-02 (gap). The IDs are otherwise correctly prefixed for a web-console spec.",
+      "files": ["evals/files/duplicate_ids.spec.md"],
+      "expectations": [
+        "Flags the `identity` lens for the duplicate requirement ID UI-FND-01 used on two different requirements",
+        "Rates the ID collision at Major (or Critical if cited elsewhere)",
+        "May note the numbering gap (UI-FND-02 missing) as a Minor finding",
+        "Does NOT propose auto-renumbering existing IDs as a safe fix",
+        "Cites both colliding headings with file:line"
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "Run spec-analyst against skills/review/spec-analyst/evals/files/clean.spec.md and report findings.",
+      "expected_output": "Should find this spec well-formed: Purpose present, requirements use SHALL, both have Given/When/Then scenarios including a failure path, no weasel words, no broken links, no stale entities. No Blocker or Critical findings; verdict HEALTHY.",
+      "files": ["evals/files/clean.spec.md"],
+      "expectations": [
+        "Does NOT raise any Blocker or Critical finding",
+        "Recognizes requirements use RFC 2119 SHALL and have Given/When/Then scenarios",
+        "Recognizes a failure/non-happy-path scenario is specified (rotation failure sets phase Degraded)",
+        "Does not fabricate contradictions, broken links, or stale-entity findings",
+        "Overall verdict is HEALTHY"
+      ]
+    },
+    {
+      "id": 7,
+      "prompt": "Run spec-analyst against skills/review/spec-analyst/evals/files/version_relative_negation.spec.md and report findings.",
+      "expected_output": "Should flag the `freshness` lens on 'No Fleet Field': 'SHALL NOT include a fleet_id field' is a version-relative negation -- it only parses for a reader who knows a prior version had fleet_id, and singles out one removed field. It is a change description masquerading as desired state (Minor). It must NOT flag 'Credential Confidentiality' (a permanent negative invariant needing no prior-version knowledge) nor 'Legacy Fleet Input Rejection' (a self-contained compat window with stated rationale and behavior).",
+      "files": ["evals/files/version_relative_negation.spec.md"],
+      "expectations": [
+        "Flags 'Requirement: No Fleet Field' under the `freshness` lens as a version-relative negation (change description, not desired state)",
+        "Rates it Minor and notes it is testable/reconcilable (hygiene, not a correctness or trace defect)",
+        "Recommends phrasing it as absolute desired state (positive field list, or an active compat behavior with rationale)",
+        "Does NOT flag 'Credential Confidentiality' -- a permanent negative invariant that passes the deletion test",
+        "Does NOT flag 'Legacy Fleet Input Rejection' -- a self-contained compat window stating what it rejects and why",
+        "Does not escalate any of these to Blocker or Critical"
+      ]
+    },
+    {
+      "id": 8,
+      "prompt": "Run spec-analyst against skills/review/spec-analyst/evals/files/decision_records.spec.md and report findings.",
+      "expected_output": "Should flag decision-record and roadmap content that does not belong in a living desired-state spec: the `## Design Decisions` table and the `## History` callout are ADR-genre content (placement lens -> recommend extracting to docs/adr/ and leaving a Decision -> ADR-NNNN link), and the `## KEK Rotation (Deferred)` block is future work (freshness lens -> recommend a ticket plus a one-line deferral). It must NOT flag the load-bearing because-clause on 'Listener Port Selection' ('to avoid two Gateways binding the same port'), which is desired state carrying its reason. All findings are Minor; verdict HEALTHY or ISSUES, never UNSAFE_TO_RECONCILE.",
+      "files": ["evals/files/decision_records.spec.md"],
+      "expectations": [
+        "Flags the `## Design Decisions` table under the `placement` lens as decision-record / ADR-genre content that has a decision-log lifecycle, not a living-spec one",
+        "Flags the `## History` callout (fleet_id column 'has been removed', 'Removed: GatewayFleetBinding') under `placement` as changelog content belonging in an ADR / git history",
+        "Recommends extracting the decisions and history to a numbered ADR under docs/adr/, leaving a compact Decision -> ADR-NNNN link",
+        "Flags the `## KEK Rotation (Deferred)` block under the `freshness` lens as deferred/roadmap future work (issue tracking, not desired state), recommending a ticket plus one explicit deferral line",
+        "Does NOT flag the one-line load-bearing rationale on 'Listener Port Selection' ('to avoid two Gateways binding the same port on one node') -- a current requirement carrying its reason is not a decision record",
+        "Rates all of these Minor and sets the verdict to HEALTHY or ISSUES, never UNSAFE_TO_RECONCILE"
+      ]
+    }
+  ]
+}
