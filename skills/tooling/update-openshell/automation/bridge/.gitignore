@@ -1,0 +1,3 @@
+# Built binaries are produced by the Dockerfile builder stage or `go build`.
+gwbridge
+gwbridge-*

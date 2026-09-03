@@ -1,0 +1,34 @@
+version: 1
+
+# Policy for the long-lived ORCHESTRATOR sandbox. It runs the scheduler, the
+# gwbridge, and the openshell CLI (to spawn/manage child sandboxes over gRPC).
+#
+# Two egress lanes, each bound to the exact binary that needs it:
+#   * gwbridge  -> the real gateway host on 443 with `tls: skip`. This is the
+#     critical bit: `tls: skip` disables the sandbox supervisor's L7 TLS
+#     interception (which otherwise pins ALPN to http/1.1 and breaks gRPC h2),
+#     giving raw TLS passthrough to the gateway pod that does offer h2.
+#   * openshell -> the keycloak issuer on 443 for the service-account REST login
+#     (client-credentials flow rides http/1.1 through the normal proxy).
+#
+# Replace the two *_HOST_PLACEHOLDER values with your gateway + issuer hosts.
+
+filesystem_policy:
+  include_workdir: true
+  read_only: [/usr, /lib, /lib64, /bin, /sbin, /proc, /dev/urandom, /app, /etc, /var/log, /opt/updater]
+  read_write: [/sandbox, /tmp, /dev/null]
+
+landlock: {compatibility: best_effort}
+process: {run_as_user: sandbox, run_as_group: sandbox}
+
+network_policies:
+  bridge:
+    name: bridge
+    endpoints:
+      - {host: GATEWAY_HOST_PLACEHOLDER, port: 443, tls: skip}
+    binaries: [{path: /usr/local/bin/gwbridge}]
+  login:
+    name: login
+    endpoints:
+      - {host: ISSUER_HOST_PLACEHOLDER, port: 443}
+    binaries: [{path: /usr/local/bin/openshell}]

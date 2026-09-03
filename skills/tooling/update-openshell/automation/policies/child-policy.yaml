@@ -1,0 +1,53 @@
+version: 1
+
+# Policy for each ephemeral CHILD sandbox that runs the update-openshell skill.
+#
+# The child does NOT talk to the openshell gateway (no gRPC, no bridge). It only
+# needs: claude via the inference sidecar, GitHub for the fork+PR, the Go module
+# proxy for `go build/test`, and GitHub release assets for pin/SHA verification.
+# The github provider enforces the fine-grained REST rules on top of these host
+# allowlists; this policy is the coarse network gate.
+
+filesystem_policy:
+  include_workdir: true
+  read_only: [/usr, /lib, /lib64, /bin, /sbin, /proc, /dev/urandom, /app, /etc, /var/log, /opt/updater]
+  read_write: [/sandbox, /tmp, /dev/null]
+
+landlock: {compatibility: best_effort}
+process: {run_as_user: sandbox, run_as_group: sandbox}
+
+network_policies:
+  inference:
+    name: inference
+    endpoints:
+      - {host: inference.local, port: 443}
+    binaries: [{path: /usr/bin/claude}, {path: /usr/local/bin/claude}]
+  github:
+    name: github
+    endpoints:
+      - {host: github.com, port: 443}
+      - {host: api.github.com, port: 443}
+      - {host: codeload.github.com, port: 443}
+      - {host: objects.githubusercontent.com, port: 443}
+      - {host: release-assets.githubusercontent.com, port: 443}
+    binaries: [{path: /usr/bin/gh}, {path: /usr/local/bin/gh}, {path: /usr/bin/git}, {path: /usr/local/bin/git}]
+  gomod:
+    name: gomod
+    endpoints:
+      - {host: proxy.golang.org, port: 443}
+      - {host: sum.golang.org, port: 443}
+      - {host: storage.googleapis.com, port: 443}
+    binaries: [{path: /usr/local/go/bin/go}]
+  registry:
+    name: registry
+    endpoints:
+      - {host: quay.io, port: 443}
+      - {host: cdn.quay.io, port: 443}
+      - {host: cdn01.quay.io, port: 443}
+      - {host: cdn02.quay.io, port: 443}
+      - {host: cdn03.quay.io, port: 443}
+      - {host: registry.redhat.io, port: 443}
+      - {host: registry.access.redhat.com, port: 443}
+      - {host: access.redhat.com, port: 443}
+      - {host: sso.redhat.com, port: 443}
+    binaries: [{path: /usr/bin/skopeo}, {path: /usr/local/bin/skopeo}]

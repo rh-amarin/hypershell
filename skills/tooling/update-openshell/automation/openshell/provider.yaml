@@ -1,0 +1,110 @@
+id: update-openshell
+display_name: update-openshell automation
+description: Single provider for the daily update-openshell skill — fork-scoped GitHub write plus egress to the Go module proxy and container registry.
+category: source_control
+
+# One provider covers every network dependency of the child sandbox because the
+# OpenShell CLI can only attach *credentialed* provider instances (it cannot
+# instantiate a credential-less custom profile), and sandbox egress is gated by
+# attached providers — hosts with no provider are denied HTTP 403.
+#
+# * GitHub: the api_token (bot PAT) authenticates gh/git; writes are scoped to
+#   the bot's own fork (rh-amarin/hypershell) — push + same-repo PR only.
+# * Go module proxy + container registry: public, unauthenticated. They are bound
+#   to the `go` and `skopeo` binaries, which never read api_token, so the PAT is
+#   not exposed to them (the egress proxy does not inject the auth header — the
+#   tools supply their own).
+#
+# Replace `rh-amarin/hypershell` if the fork lives under a different owner/name.
+
+credentials:
+- name: api_token
+  description: GitHub PAT for the bot account (fork owner)
+  env_vars:
+  - GITHUB_TOKEN
+  - GH_TOKEN
+  required: true
+  auth_style: bearer
+  header_name: authorization
+  query_param: ''
+
+endpoints:
+# --- GitHub ---
+# REST: broad read, plus the single write to open the PR WITHIN the fork.
+- host: api.github.com
+  port: 443
+  protocol: rest
+  enforcement: enforce
+  rules:
+  - allow: {method: GET, path: '**'}
+  - allow: {method: HEAD, path: '**'}
+  - allow: {method: OPTIONS, path: '**'}
+  - allow: {method: POST, path: /repos/rh-amarin/hypershell/pulls}
+# GraphQL: read-only.
+- host: api.github.com
+  port: 443
+  protocol: graphql
+  access: read-only
+  enforcement: enforce
+  path: /graphql
+# git over https: clone/fetch (read) and push ONLY to the fork (write).
+- host: github.com
+  port: 443
+  protocol: rest
+  enforcement: enforce
+  rules:
+  - allow: {method: GET, path: '**'}
+  - allow: {method: HEAD, path: '**'}
+  - allow: {method: OPTIONS, path: '**'}
+  - allow: {method: POST, path: "/**/git-upload-pack"}
+  - allow: {method: POST, path: /rh-amarin/hypershell.git/git-receive-pack}
+  - allow: {method: POST, path: /rh-amarin/hypershell/git-receive-pack}
+# git/gh read helpers (clone redirects, release assets the skill inspects).
+- host: codeload.github.com
+  port: 443
+- host: objects.githubusercontent.com
+  port: 443
+- host: release-assets.githubusercontent.com
+  port: 443
+
+# --- Go module proxy (public, for `go build/vet/test`) ---
+- host: proxy.golang.org
+  port: 443
+- host: sum.golang.org
+  port: 443
+- host: storage.googleapis.com
+  port: 443
+
+# --- Container registry (public, for `skopeo inspect` digest resolution) ---
+- host: quay.io
+  port: 443
+- host: cdn.quay.io
+  port: 443
+- host: cdn01.quay.io
+  port: 443
+- host: cdn02.quay.io
+  port: 443
+- host: cdn03.quay.io
+  port: 443
+- host: registry.redhat.io
+  port: 443
+- host: registry.access.redhat.com
+  port: 443
+- host: access.redhat.com
+  port: 443
+- host: sso.redhat.com
+  port: 443
+
+binaries:
+- /usr/bin/gh
+- /usr/local/bin/gh
+- /usr/bin/git
+- /usr/local/bin/git
+- /usr/local/go/bin/go
+- /usr/bin/skopeo
+- /usr/local/bin/skopeo
+
+inference_capable: false
+discovery:
+  credentials:
+  - api_token
