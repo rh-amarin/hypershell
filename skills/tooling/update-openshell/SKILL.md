@@ -233,6 +233,24 @@ If a run produced no new lessons, that is itself worth a one-line log entry
 
 Newest first. Each entry: version, date, what happened, what changed in the repo.
 
+- **v0.0.113-rhaiv.2 (2026-09-03, automated run, 0.0.109-rhaiv.0 -> 0.0.113-rhaiv.2):**
+  Clean mechanical bump; no contract drift detected. Range 110-113 was safe:
+  credential driver enhancements (v0.0.110 stores refresh credentials) remain
+  backward compatible with HyperShell's ValidateCredentialDriverConfig; OIDC
+  device auth grant (v0.0.110) is an extension, not a breaking change; policy
+  improvements (DNS correlation, direct TCP egress in v0.0.111) and driver
+  refactors are internal to gateway/supervisor. No config schema, Sandbox API
+  version, or OIDC surface changes. v1beta1 remains the target Sandbox API
+  version per release notes. Updated all 12 footprint files including the IBM
+  kustomization overlay and ibm-cluster skill mirror commands. The target was
+  the **latest available mirrored version** on quay.io/opendatahub - v0.0.113
+  with the `-rhaiv.2` suffix, not the absolute latest upstream (v0.0.116), as
+  v0.0.114/115/116 have not yet been mirrored. v0.0.112 and v0.0.114 do not
+  exist upstream (skipped version tags). Build, vet, test, and make check
+  (forbidden-terms, dependency-pins, ci-components) all pass. No footprint gaps
+  discovered; the table remains accurate. Reconciler.go and configmap.yaml
+  version-referencing comments updated to 0.0.113.
+
 - **v0.0.109 (2026-08-19, second run, 0.0.106 -> 0.0.109; validated on ROKS):**
   Unlike 106, this bump was NOT config-schema-neutral - three regressions only
   surfaced running the full ROKS e2e (`components/pr-test/e2e-openshell-roks.sh`),
