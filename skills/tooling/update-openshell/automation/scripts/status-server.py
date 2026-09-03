@@ -13,6 +13,7 @@ Routes:
   GET /            -> HTML dashboard (newest tick first)
   GET /ticks.jsonl -> raw JSON Lines history (machine-readable)
   GET /log         -> tail of the scheduler/tick execution log
+  GET /current     -> live skill log of the tick in progress (mirrored from child)
   GET /healthz     -> "ok"
 
 Stdlib only (the base image ships python3); no third-party packages.
@@ -25,6 +26,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 STATE_DIR = os.environ.get("STATE_DIR", "/sandbox/updater-state")
 HISTORY_FILE = os.path.join(STATE_DIR, "ticks.jsonl")
 LOG_FILE = os.path.join(STATE_DIR, "scheduler.log")
+CURRENT_FILE = os.path.join(STATE_DIR, "current-skill.log")
 HOST = os.environ.get("STATUS_HOST", "127.0.0.1")  # loopback: exposed via gateway
 PORT = int(os.environ.get("STATUS_PORT", "8080"))
 LOG_TAIL_BYTES = 64 * 1024
@@ -81,6 +83,14 @@ def render_html(ticks):
             "</tr>"
         )
     body = "\n".join(rows) or '<tr><td colspan="6"><i>no ticks recorded yet</i></td></tr>'
+    running = ""
+    try:
+        with open(CURRENT_FILE, "r", encoding="utf-8", errors="replace") as fh:
+            cur = fh.read()
+        if cur and "##SKILL_DONE" not in cur:
+            running = '<p class="run">● a skill run is in progress — <a href="/current">live log</a></p>'
+    except FileNotFoundError:
+        pass
     return f"""<!doctype html>
 <html><head><meta charset="utf-8"><title>update-openshell ticks</title>
 <style>
@@ -89,25 +99,27 @@ def render_html(ticks):
  th,td{{text-align:left;padding:.4rem .8rem;border-bottom:1px solid #e0e0e0}}
  th{{color:#5f6368;font-weight:600;font-size:.8rem;text-transform:uppercase}}
  a{{color:#1a73e8}} .foot{{margin-top:1rem;color:#5f6368;font-size:.85rem}}
+ .run{{color:#137333;font-weight:600}}
 </style></head><body>
 <h1>update-openshell — tick history</h1>
+{running}
 <table>
  <tr><th>Started (UTC)</th><th>Total</th><th>Analysis</th><th>Status</th><th>Child</th><th>PR</th></tr>
  {body}
 </table>
-<p class="foot">{len(ticks)} tick(s) · raw: <a href="/ticks.jsonl">/ticks.jsonl</a> · log: <a href="/log">/log</a></p>
+<p class="foot">{len(ticks)} tick(s) · raw: <a href="/ticks.jsonl">/ticks.jsonl</a> · log: <a href="/log">/log</a> · live: <a href="/current">/current</a></p>
 </body></html>"""
 
 
-def tail_log():
+def tail_file(path, missing_msg):
     try:
-        with open(LOG_FILE, "rb") as fh:
+        with open(path, "rb") as fh:
             fh.seek(0, os.SEEK_END)
             size = fh.tell()
             fh.seek(max(0, size - LOG_TAIL_BYTES))
             return fh.read().decode("utf-8", "replace")
     except FileNotFoundError:
-        return "(no scheduler log yet)\n"
+        return missing_msg
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -131,7 +143,9 @@ class Handler(BaseHTTPRequestHandler):
             except FileNotFoundError:
                 self._send("", "application/x-ndjson")
         elif path == "/log":
-            self._send(tail_log())
+            self._send(tail_file(LOG_FILE, "(no scheduler log yet)\n"))
+        elif path == "/current":
+            self._send(tail_file(CURRENT_FILE, "(no skill running)\n"))
         elif path == "/":
             self._send(render_html(read_ticks()), "text/html; charset=utf-8")
         else:

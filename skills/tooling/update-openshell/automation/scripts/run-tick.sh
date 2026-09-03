@@ -87,7 +87,10 @@ CHILD_READY_MARKER=/tmp/child-ready
 # restarts). One JSON object per tick is appended on exit (see record_tick).
 STATE_DIR="${STATE_DIR:-/sandbox/updater-state}"
 HISTORY_FILE="$STATE_DIR/ticks.jsonl"
+# Live skill log, mirrored from the child during the run and served at /current.
+SKILL_MIRROR="$STATE_DIR/current-skill.log"
 mkdir -p "$STATE_DIR"
+STREAM_PID=""            # pid of the child log stream (see run_skill)
 
 # Per-tick timing/outcome, filled in as the tick runs and recorded on exit.
 TICK_START_TS=$(date +%s)
@@ -150,6 +153,10 @@ cleanup() {
     log "deleted child sandbox $CHILD_NAME"
   else
     log "WARNING: could not delete child sandbox $CHILD_NAME (delete it manually)" >&2
+  fi
+  if [[ -n "$STREAM_PID" ]]; then
+    kill "$STREAM_PID" 2>/dev/null || true
+    wait "$STREAM_PID" 2>/dev/null || true
   fi
   if [[ -n "$BRIDGE_PID" ]]; then
     kill "$BRIDGE_PID" 2>/dev/null || true
@@ -221,16 +228,37 @@ create_child() {
   log "child sandbox ready"
 }
 
+# (Re)start a long-lived stream of the child's skill log into the local mirror.
+# ONE `tail -F` exec carries both the live progress (served at /current) and the
+# completion sentinel — so completion is detected the instant it is streamed,
+# without the per-poll `sandbox exec` calls that used to get CPU-starved by the
+# busy child and lag detection minutes behind actual completion.
+start_skill_stream() {
+  local log_file="$1"
+  : >"$SKILL_MIRROR"   # fresh (also on restart, so a re-read doesn't duplicate)
+  timeout "$SKILL_TIMEOUT_SECONDS" \
+    openshell sandbox exec --name "$CHILD_NAME" --no-tty \
+    /usr/bin/tail -n +1 -F "$log_file" >>"$SKILL_MIRROR" 2>/dev/null &
+  STREAM_PID=$!
+}
+
 run_skill() {
   local log_file=/tmp/skill.log status_file=/tmp/skill.status status_tmp=/tmp/skill.status.tmp
+  # The child records its OWN start/end epoch and appends a completion sentinel to
+  # the log, so ANALYSIS_SECONDS is the skill's true runtime — independent of how
+  # quickly the orchestrator detects it.
   local detached
   read -r -d '' detached <<'EOF' || true
 umask 077
 trap '' HUP
 exec </dev/null >/dev/null 2>&1
 set +e
+start=$(date +%s)
 /usr/bin/bash "$4" >"$1" 2>&1
-printf '%s\n' "$?" >"$2"
+rc=$?
+end=$(date +%s)
+printf '##SKILL_DONE rc=%s dur=%s##\n' "$rc" "$((end - start))" >>"$1"
+printf '%s\n' "$rc" >"$2"
 /usr/bin/mv "$2" "$3"
 EOF
 
@@ -241,42 +269,41 @@ EOF
     /usr/bin/setsid --fork /usr/bin/bash -c "$detached" \
     bash "$log_file" "$status_tmp" "$status_file" "$CHILD_SKILL_SCRIPT"
 
-  # Mark the start of the analysis (the skill/claude run) so its wall-clock can be
-  # reported separately from the tick's bridge/child-setup overhead.
   local skill_launch=$((SECONDS))
   ANALYSIS_SECONDS=0
+  start_skill_stream "$log_file"
+  log "streaming skill log to $SKILL_MIRROR (served live at /current)"
 
-  # Poll for completion. Each poll is hard-capped by os_child, so even if the
-  # child starves `sandbox exec` the loop still advances and SKILL_TIMEOUT_SECONDS
-  # is honored; on timeout we return 124 and the EXIT trap deletes the child.
-  local deadline=$((SECONDS + SKILL_TIMEOUT_SECONDS)) remote
+  # Watch the LOCAL mirror for the completion sentinel — cheap, no per-poll exec.
+  local deadline=$((SECONDS + SKILL_TIMEOUT_SECONDS)) sentinel rc dur
   local next_relogin=$((SECONDS + SA_RELOGIN_INTERVAL_SECONDS))
   while (( SECONDS < deadline )); do
-    # Keep the SA token fresh so a tick longer than the token TTL can still poll
-    # and (later) delete the child.
+    # Keep the SA token fresh so a tick longer than the token TTL can still delete
+    # the child (and restart the stream) on a fresh token.
     if (( SECONDS >= next_relogin )); then
       sa_login || log "periodic SA re-login failed (will retry next interval)" >&2
       next_relogin=$((SECONDS + SA_RELOGIN_INTERVAL_SECONDS))
     fi
-    remote=$(os_child sandbox exec --name "$CHILD_NAME" --timeout 30 --no-tty \
-      /usr/bin/bash -c 'if [[ -r "$1" ]]; then cat "$1"; else printf running; fi' \
-      bash "$status_file" 2>/dev/null || printf 'poll-error')
-    if [[ "$remote" =~ ^[0-9]+$ ]]; then
-      ANALYSIS_SECONDS=$(( SECONDS - skill_launch ))
-      local child_log
-      child_log=$(os_child sandbox exec --name "$CHILD_NAME" --timeout 60 --no-tty \
-        /usr/bin/cat "$log_file" 2>/dev/null || true)
-      printf '%s\n' "$child_log"
-      # Best-effort PR URL for the tick history (skill prints it on success).
-      PR_URL=$(printf '%s' "$child_log" \
-        | grep -oiE 'https://github\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+/pull/[0-9]+' \
-        | head -1 || true)
-      log "skill finished with status $remote (analysis ${ANALYSIS_SECONDS}s)"
-      return "$remote"
+    sentinel=$(grep -aoE '##SKILL_DONE rc=[0-9]+ dur=[0-9]+##' "$SKILL_MIRROR" 2>/dev/null | tail -1 || true)
+    if [[ -n "$sentinel" ]]; then
+      rc=${sentinel#*rc=}; rc=${rc%% *}
+      dur=${sentinel#*dur=}; dur=${dur%%##*}
+      ANALYSIS_SECONDS="$dur"
+      PR_URL=$(grep -aoiE 'https://github\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+/pull/[0-9]+' \
+        "$SKILL_MIRROR" | head -1 || true)
+      log "skill finished with status $rc (analysis ${ANALYSIS_SECONDS}s)"
+      kill "$STREAM_PID" 2>/dev/null || true; wait "$STREAM_PID" 2>/dev/null || true
+      return "$rc"
+    fi
+    # Restart the stream if it dropped (e.g. a network blip) before the sentinel.
+    if ! kill -0 "$STREAM_PID" 2>/dev/null; then
+      log "skill log stream ended before completion; restarting" >&2
+      start_skill_stream "$log_file"
     fi
     sleep "$SKILL_POLL_SECONDS"
   done
   ANALYSIS_SECONDS=$(( SECONDS - skill_launch ))
+  kill "$STREAM_PID" 2>/dev/null || true; wait "$STREAM_PID" 2>/dev/null || true
   log "skill did not finish within ${SKILL_TIMEOUT_SECONDS}s; aborting (child will be deleted)" >&2
   return 124
 }
