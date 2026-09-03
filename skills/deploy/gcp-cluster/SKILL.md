@@ -423,7 +423,7 @@ CLUSTER_ID=$(echo "$CLUSTER" | python3 -c "import json,sys; print(json.load(sys.
 # GatewayRelease
 RELEASE=$(curl -sk -X POST "$API/gateway_releases" -H 'Content-Type: application/json' \
   -H "Authorization: Bearer $TOKEN" \
-  -d "{\"name\":\"openshell-0.0.109\",\"image\":\"quay.io/opendatahub/odh-openshell-gateway:v0.0.109-rhaiv.0\"}")
+  -d "{\"name\":\"openshell-0.0.113\",\"image\":\"quay.io/opendatahub/odh-openshell-gateway:v0.0.113-rhaiv.1\"}")
 RELEASE_ID=$(echo "$RELEASE" | python3 -c "import json,sys; print(json.load(sys.stdin)['id'])")
 
 # ManagedDatabase (provider=cnpg for CNPG-managed provisioning)
@@ -445,7 +445,7 @@ GATEWAY=$(curl -sk -X POST "$API/gateways" -H 'Content-Type: application/json' \
   \"release_id\": \"$RELEASE_ID\",
   \"database_id\": \"$DB_ID\",
   \"namespace\": \"openshell-gcptest\",
-  \"image\": \"quay.io/opendatahub/odh-openshell-gateway:v0.0.109-rhaiv.0\",
+  \"image\": \"quay.io/opendatahub/odh-openshell-gateway:v0.0.113-rhaiv.1\",
   \"route\": \"{\\\"enabled\\\": true}\"
 }")
 echo "$GATEWAY" | python3 -m json.tool
