@@ -233,6 +233,21 @@ If a run produced no new lessons, that is itself worth a one-line log entry
 
 Newest first. Each entry: version, date, what happened, what changed in the repo.
 
+- **v0.0.113 (2026-09-03, third run, 0.0.109 -> 0.0.113; mechanical bump):**
+  Clean mechanical bump across releases v0.0.110, v0.0.111, v0.0.113 (v0.0.112 and
+  v0.0.114 exist but have no GitHub releases). v0.0.115 and v0.0.116 exist upstream
+  but no rhaiv builds are available yet, so updated to latest available v0.0.113-rhaiv.2.
+  - **No contract changes detected:** Release notes for 110-116 showed internal
+    refactoring (compute driver unification, OTLP tracing, DNS/TCP policy features,
+    canonical main process) but no changes to config schema, Sandbox API version
+    (still v1beta1), credential drivers, or PKI/TLS/ingress that affect HyperShell.
+  - **Image availability:** Only v0.0.113-rhaiv.2 (and earlier) available on
+    quay.io/opendatahub; v0.0.115-116 have no rhaiv builds yet. Updated to latest
+    available (0.0.113-rhaiv.2).
+  - **All checks pass:** `make check`, `go build`, `go vet`, `go test` all pass.
+  - **Footprint verified:** grep discovery confirmed all files in the footprint table
+    were updated; validation_test.go correctly left as a fixture.
+
 - **v0.0.109 (2026-08-19, second run, 0.0.106 -> 0.0.109; validated on ROKS):**
   Unlike 106, this bump was NOT config-schema-neutral - three regressions only
   surfaced running the full ROKS e2e (`components/pr-test/e2e-openshell-roks.sh`),
