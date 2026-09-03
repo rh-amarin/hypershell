@@ -233,7 +233,7 @@ The `credential_driver` configuration on a Gateway SHALL be immutable after the 
 kind: Gateway
 name: openshell-gateway
 project: tenant-a
-image: quay.io/opendatahub/odh-openshell-gateway:v0.0.109-rhaiv.0@sha256:a80b79e514826e8d57ea137749cf18a6e7f3d92e26bfefe005f3a9c4a55b8bdd
+image: quay.io/opendatahub/odh-openshell-gateway:v0.0.113-rhaiv.2@sha256:6affd5e8f69e55dc43fe19491fc41ac164c4b759962f68a4635faa6956948fdc
 serverDnsNames:
   - openshell-gateway.tenant-a.svc.cluster.local
 credential_driver:
@@ -248,7 +248,7 @@ credential_driver:
 kind: Gateway
 name: openshell-gateway
 project: tenant-a
-image: quay.io/opendatahub/odh-openshell-gateway:v0.0.109-rhaiv.0@sha256:a80b79e514826e8d57ea137749cf18a6e7f3d92e26bfefe005f3a9c4a55b8bdd
+image: quay.io/opendatahub/odh-openshell-gateway:v0.0.113-rhaiv.2@sha256:6affd5e8f69e55dc43fe19491fc41ac164c4b759962f68a4635faa6956948fdc
 serverDnsNames:
   - openshell-gateway.tenant-a.svc.cluster.local
 credential_driver:
@@ -266,7 +266,7 @@ credential_driver:
 kind: Gateway
 name: openshell-gateway
 project: tenant-a
-image: quay.io/opendatahub/odh-openshell-gateway:v0.0.109-rhaiv.0@sha256:a80b79e514826e8d57ea137749cf18a6e7f3d92e26bfefe005f3a9c4a55b8bdd
+image: quay.io/opendatahub/odh-openshell-gateway:v0.0.113-rhaiv.2@sha256:6affd5e8f69e55dc43fe19491fc41ac164c4b759962f68a4635faa6956948fdc
 serverDnsNames:
   - openshell-gateway.tenant-a.svc.cluster.local
 ```

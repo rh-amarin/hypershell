@@ -168,7 +168,7 @@ A Gateway SHALL include provisioning configuration fields that the control plane
 
 | Field | Type | Description |
 |---|---|---|
-| `image` | string | Gateway container image reference (e.g., `quay.io/opendatahub/odh-openshell-gateway:v0.0.109-rhaiv.0@sha256:a80b79e514826e8d57ea137749cf18a6e7f3d92e26bfefe005f3a9c4a55b8bdd`) |
+| `image` | string | Gateway container image reference (e.g., `quay.io/opendatahub/odh-openshell-gateway:v0.0.113-rhaiv.2@sha256:6affd5e8f69e55dc43fe19491fc41ac164c4b759962f68a4635faa6956948fdc`) |
 | `supervisor_image` | string | Supervisor sidecar container image (default supplied by `GATEWAY_SUPERVISOR_IMAGE` env var on the control-plane deployment; see `deploy/base/controller.yaml`) |
 | `server_dns_names` | string[] | DNS names for TLS certificate SANs |
 | `oidc` | JSONB | OIDC authentication config: `{issuer, audience, jwks_ttl, roles_claim, admin_role, user_role, scopes_claim}` |
