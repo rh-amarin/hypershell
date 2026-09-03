@@ -50,9 +50,9 @@ CHILD_POLICY="${CHILD_POLICY:-/opt/updater/child-policy.yaml}"
 # so it is executed in place — no runtime upload (which would land it in a dir).
 CHILD_SKILL_SCRIPT="${CHILD_SKILL_SCRIPT:-/opt/updater/run-skill.sh}"
 SANDBOX_READY_TIMEOUT_SECONDS="${SANDBOX_READY_TIMEOUT_SECONDS:-180}"
-# A real skill run now actually executes `go build/vet/test` + `make check`, which
-# can approach an hour, so the wall-clock budget is generous.
-SKILL_TIMEOUT_SECONDS="${SKILL_TIMEOUT_SECONDS:-7200}"
+# A real skill run executes `go build/vet/test` + `make check`; validated runs
+# land in ~15-20 min, so 25 min gives headroom without letting a wedged run linger.
+SKILL_TIMEOUT_SECONDS="${SKILL_TIMEOUT_SECONDS:-1500}"
 SKILL_POLL_SECONDS="${SKILL_POLL_SECONDS:-15}"
 # The SA gateway token has a finite TTL (~1h). A tick can outlive it, after which
 # the orchestrator can no longer poll or delete the child. Re-login this often to
