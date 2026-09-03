@@ -24,7 +24,7 @@ data:
     supervisor_image      = "SUPERVISOR_IMAGE_PLACEHOLDER"
     # Provisions client TLS material into sandbox runners so they can verify the
     # gateway's TLS server cert (sets OPENSHELL_TLS_CA from the secret's ca.crt).
-    # Required by openshell 0.0.109's Combined topology; NOT external-client mTLS
+    # Required by openshell 0.0.111's Combined topology; NOT external-client mTLS
     # (external clients authenticate via OIDC over the Route -- see the absence of
     # client_ca_path under [openshell.gateway.tls]).
     client_tls_secret_name = "openshell-client-tls"

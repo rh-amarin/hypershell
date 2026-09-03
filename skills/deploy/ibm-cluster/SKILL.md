@@ -342,7 +342,7 @@ CA (`openshell-ca` Issuer + `openshell-ca`/`openshell-server` Certificates) for 
 gateway pod's own server TLS, **plus an `openshell-client` Certificate
 (`openshell-client-tls`)**. That client cert is NOT external-client mTLS (external
 clients authenticate via OIDC over the Route); it exists so sandbox runners can
-verify the gateway's server cert. openshell 0.0.109 mounts `openshell-client-tls`
+verify the gateway's server cert. openshell 0.0.111 mounts `openshell-client-tls`
 into every sandbox and sets `OPENSHELL_TLS_CA` from its `ca.crt` whenever
 `gateway.toml` sets `client_tls_secret_name` - without it every sandbox crashloops
 on `OPENSHELL_TLS_CA is required` and never reaches Ready (see §5.9). Route mode
@@ -384,9 +384,9 @@ secrets are unnecessary):
 skopeo copy --remove-signatures --dest-tls-verify=false --dest-creds "pusher:$(oc -n hypershell create token pusher)" \
   docker://docker.io/library/postgres:18 docker://$REG/openshift/postgres:18
 skopeo copy --dest-tls-verify=false --dest-creds "pusher:$(oc -n hypershell create token pusher)" \
-  docker://quay.io/opendatahub/odh-openshell-gateway:v0.0.109-rhaiv.0@sha256:a80b79e514826e8d57ea137749cf18a6e7f3d92e26bfefe005f3a9c4a55b8bdd    docker://$REG/openshift/openshell-gateway:v0.0.109-rhaiv.0
+  docker://quay.io/opendatahub/odh-openshell-gateway:v0.0.111-rhaiv.0@sha256:ba61f3bad944a7f261a70a6d196cbb9d6fe0aa1a8458465c329837a1b7e546b0    docker://$REG/openshift/openshell-gateway:v0.0.111-rhaiv.0
 skopeo copy --dest-tls-verify=false --dest-creds "pusher:$(oc -n hypershell create token pusher)" \
-  docker://quay.io/opendatahub/odh-openshell-supervisor:v0.0.109-rhaiv.0@sha256:96e21135c18bc9f6f4d1dfd0cccae3c91769ef4d87da2e470eca4b56a24b2152 docker://$REG/openshift/openshell-supervisor:v0.0.109-rhaiv.0
+  docker://quay.io/opendatahub/odh-openshell-supervisor:v0.0.111-rhaiv.0@sha256:b75045ba8ad78c5f4e167bf8cb98263d04b6ec79f14cfba9d901a5b0f516e8ff docker://$REG/openshift/openshell-supervisor:v0.0.111-rhaiv.0
 oc -n openshift get is    # expect openshell-gateway, openshell-supervisor, postgres
 ```
 
@@ -451,8 +451,8 @@ API="https://$(oc -n hypershell get route hypershell-api -o jsonpath='{.spec.hos
 curl -sk -X POST "$API/gateways" -H 'Content-Type: application/json' -d '{
   "name":"ibm-test-gw","cluster_id":"...","release_id":"...","database_id":"...",
   "namespace":"openshell-ibmtest",
-  "image":"image-registry.openshift-image-registry.svc:5000/openshift/openshell-gateway:0.0.109",
-  "supervisor_image":"image-registry.openshift-image-registry.svc:5000/openshift/openshell-supervisor:0.0.109",
+  "image":"image-registry.openshift-image-registry.svc:5000/openshift/openshell-gateway:0.0.111",
+  "supervisor_image":"image-registry.openshift-image-registry.svc:5000/openshift/openshell-supervisor:0.0.111",
   "route":"{\"enabled\": true}"
 }'
 ```
@@ -486,7 +486,7 @@ path without auth. For an authenticated registration a **bare** `openshell gatew
 add https://<host>` is wrong - it selects edge/"cloud" mode and 404s on these
 gRPC-only gateways; use OIDC mode (`--oidc-issuer …`, §5.7).
 
-**Two 0.0.109 gateway-workload details the control plane provisions for you** (both
+**Two 0.0.111 gateway-workload details the control plane provisions for you** (both
 were regressions found bringing up 0.0.109 on ROKS - noted so a future bump can
 re-verify them):
 
@@ -521,7 +521,7 @@ plane grants the tenant SA RBAC *against* `agents.x-k8s.io` and mints the
 per-tenant sandbox SA + privileged-SCC binding, but it does **not** install the
 CRD/controller - that is a cluster prerequisite, like cert-manager. Verified on
 `hysh-ibm-01` (2026-08-15) with `agent-sandbox` **v0.5.5** (first line to serve
-`v1beta1`, which gateway 0.0.109 prefers).
+`v1beta1`, which gateway 0.0.111 prefers).
 
 Same ROKS constraint as everything else: the controller image
 (`registry.k8s.io/agent-sandbox/agent-sandbox-controller:v0.5.5`) and the tenant
@@ -643,7 +643,7 @@ membership - see §5.9).
 
 ### 5.9: Workspace membership - the second authz layer for standard users
 
-openshell 0.0.109 enforces **two independent authorization systems**, and a
+openshell 0.0.111 enforces **two independent authorization systems**, and a
 standard user must clear both to create a sandbox:
 
 1. **OIDC role** (layer 1): the `openshell-admin`/`openshell-user` client role
@@ -668,8 +668,8 @@ openshell -g <admin-gateway> workspace member add \
 **CLI version matters.** The `workspace` subcommand did not exist in older CLIs
 (the system `/bin/openshell` on the dev host is **0.0.55** and errors with
 `unrecognized subcommand 'workspace'`). Use a CLI **>= 0.0.98** (there is no
-downloadable 0.0.109 CLI release - only the gateway container image is 0.0.109; the
-0.0.98 CLI reads the same config format and talks to a 0.0.109 gateway fine). This
+downloadable 0.0.111 CLI release - only the gateway container image is 0.0.111; the
+0.0.98 CLI reads the same config format and talks to a 0.0.111 gateway fine). This
 is exactly what the ROKS e2e (`components/pr-test/e2e-openshell-roks.sh`) does in
 its developer-RBAC step, and why it defaults `OPENSHELL` to `~/.local/bin/openshell`.
 
