@@ -50,8 +50,14 @@ CHILD_POLICY="${CHILD_POLICY:-/opt/updater/child-policy.yaml}"
 # so it is executed in place — no runtime upload (which would land it in a dir).
 CHILD_SKILL_SCRIPT="${CHILD_SKILL_SCRIPT:-/opt/updater/run-skill.sh}"
 SANDBOX_READY_TIMEOUT_SECONDS="${SANDBOX_READY_TIMEOUT_SECONDS:-180}"
-SKILL_TIMEOUT_SECONDS="${SKILL_TIMEOUT_SECONDS:-3600}"
+# A real skill run now actually executes `go build/vet/test` + `make check`, which
+# can approach an hour, so the wall-clock budget is generous.
+SKILL_TIMEOUT_SECONDS="${SKILL_TIMEOUT_SECONDS:-7200}"
 SKILL_POLL_SECONDS="${SKILL_POLL_SECONDS:-15}"
+# The SA gateway token has a finite TTL (~1h). A tick can outlive it, after which
+# the orchestrator can no longer poll or delete the child. Re-login this often to
+# keep the token fresh for the whole tick. gwbridge stays up, so re-login is cheap.
+SA_RELOGIN_INTERVAL_SECONDS="${SA_RELOGIN_INTERVAL_SECONDS:-1800}"
 # Hard wall-clock cap for a SINGLE child-facing openshell call. A busy child can
 # STARVE `sandbox exec` so the CLI's own --timeout is not honored and the call
 # blocks forever — which would prevent SKILL_TIMEOUT_SECONDS from ever firing.
@@ -76,6 +82,19 @@ READY_FILE="$CONFIG_ROOT/bridge.ready"
 BRIDGE_LOG="$CONFIG_ROOT/bridge.log"
 CHILD_READY_MARKER=/tmp/child-ready
 
+# Persistent tick history, served over HTTP by status-server.py. Lives on the
+# read-write /sandbox mount so it survives across ticks (and orchestrator
+# restarts). One JSON object per tick is appended on exit (see record_tick).
+STATE_DIR="${STATE_DIR:-/sandbox/updater-state}"
+HISTORY_FILE="$STATE_DIR/ticks.jsonl"
+mkdir -p "$STATE_DIR"
+
+# Per-tick timing/outcome, filled in as the tick runs and recorded on exit.
+TICK_START_TS=$(date +%s)
+TICK_START_ISO=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+ANALYSIS_SECONDS=-1     # skill (claude) wall-clock; -1 until the skill launches
+PR_URL=""               # best-effort, extracted from the child skill log
+
 log() { printf '%s run-tick: %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$*"; }
 
 # Every child-facing openshell call goes through this hard wall-clock cap
@@ -84,9 +103,46 @@ log() { printf '%s run-tick: %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$*"; }
 # out; callers treat that like any other transient poll failure.
 os_child() { timeout -k 10 "$CHILD_EXEC_TIMEOUT_SECONDS" openshell "$@"; }
 
+# Service-account (client-credentials) login. Called once at startup and again
+# periodically during the poll loop + before the cleanup delete, so an expired
+# token can never leave the orchestrator unable to manage/delete its child.
+sa_login() {
+  OPENSHELL_OIDC_CLIENT_SECRET="$SA_CLIENT_SECRET" \
+    timeout 60 openshell gateway login "$GATEWAY_NAME" >/dev/null 2>&1
+}
+
+# Append one JSON line describing this tick to the history file that the status
+# server serves. Called from cleanup with the final exit status: 0=success,
+# 124=timeout (skill did not finish in budget), anything else=failed.
+record_tick() {
+  local exit_code="$1" outcome tick_end_ts tick_end_iso duration
+  case "$exit_code" in
+    0)   outcome=success ;;
+    124) outcome=timeout ;;
+    *)   outcome=failed ;;
+  esac
+  tick_end_ts=$(date +%s)
+  tick_end_iso=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+  duration=$(( tick_end_ts - TICK_START_TS ))
+  # Controlled fields only (ISO timestamps, integers, our own names) — no need to
+  # JSON-escape. PR_URL matches a strict github URL regex; REPOSITORY is validated.
+  printf '{"tick_start":"%s","tick_end":"%s","duration_seconds":%d,"analysis_seconds":%d,"status":"%s","exit_code":%d,"child":"%s","repository":"%s","pr_url":"%s"}\n' \
+    "$TICK_START_ISO" "$tick_end_iso" "$duration" "$ANALYSIS_SECONDS" \
+    "$outcome" "$exit_code" "$CHILD_NAME" "$REPOSITORY" "$PR_URL" \
+    >>"$HISTORY_FILE" 2>/dev/null || true
+  log "tick recorded: status=$outcome duration=${duration}s analysis=${ANALYSIS_SECONDS}s pr=${PR_URL:-none}"
+}
+
 cleanup() {
   local status=$?
   trap - EXIT INT TERM
+  # Record the tick outcome/timing first, so it is captured even if the delete
+  # below is slow or fails. PR_URL/ANALYSIS_SECONDS were set by run_skill.
+  record_tick "$status"
+  # Refresh the SA token first: a long tick can outlive it, and an expired token
+  # makes `sandbox delete` fail auth (leaving the child to linger). Best-effort —
+  # if it fails, the delete below still tries and the WARNING is the backstop.
+  sa_login || true
   # Delete the child sandbox best-effort so nothing lingers between days. Capped
   # so a starved delete can't wedge the trap (retry once after a short pause).
   if os_child sandbox delete "$CHILD_NAME" >/dev/null 2>&1 \
@@ -133,8 +189,7 @@ configure_gateway() {
     --oidc-issuer "$OIDC_ISSUER" \
     --oidc-client-id "$OIDC_CLIENT_ID" \
     --oidc-audience "$OIDC_AUDIENCE" >/dev/null 2>&1 || true
-  OPENSHELL_OIDC_CLIENT_SECRET="$SA_CLIENT_SECRET" \
-    timeout 60 openshell gateway login "$GATEWAY_NAME" >/dev/null
+  sa_login || { log "service-account login failed" >&2; return 1; }
   log "authenticated service account to gateway"
 }
 
@@ -186,22 +241,42 @@ EOF
     /usr/bin/setsid --fork /usr/bin/bash -c "$detached" \
     bash "$log_file" "$status_tmp" "$status_file" "$CHILD_SKILL_SCRIPT"
 
+  # Mark the start of the analysis (the skill/claude run) so its wall-clock can be
+  # reported separately from the tick's bridge/child-setup overhead.
+  local skill_launch=$((SECONDS))
+  ANALYSIS_SECONDS=0
+
   # Poll for completion. Each poll is hard-capped by os_child, so even if the
   # child starves `sandbox exec` the loop still advances and SKILL_TIMEOUT_SECONDS
   # is honored; on timeout we return 124 and the EXIT trap deletes the child.
   local deadline=$((SECONDS + SKILL_TIMEOUT_SECONDS)) remote
+  local next_relogin=$((SECONDS + SA_RELOGIN_INTERVAL_SECONDS))
   while (( SECONDS < deadline )); do
+    # Keep the SA token fresh so a tick longer than the token TTL can still poll
+    # and (later) delete the child.
+    if (( SECONDS >= next_relogin )); then
+      sa_login || log "periodic SA re-login failed (will retry next interval)" >&2
+      next_relogin=$((SECONDS + SA_RELOGIN_INTERVAL_SECONDS))
+    fi
     remote=$(os_child sandbox exec --name "$CHILD_NAME" --timeout 30 --no-tty \
       /usr/bin/bash -c 'if [[ -r "$1" ]]; then cat "$1"; else printf running; fi' \
       bash "$status_file" 2>/dev/null || printf 'poll-error')
     if [[ "$remote" =~ ^[0-9]+$ ]]; then
-      os_child sandbox exec --name "$CHILD_NAME" --timeout 60 --no-tty \
-        /usr/bin/cat "$log_file" 2>/dev/null || true
-      log "skill finished with status $remote"
+      ANALYSIS_SECONDS=$(( SECONDS - skill_launch ))
+      local child_log
+      child_log=$(os_child sandbox exec --name "$CHILD_NAME" --timeout 60 --no-tty \
+        /usr/bin/cat "$log_file" 2>/dev/null || true)
+      printf '%s\n' "$child_log"
+      # Best-effort PR URL for the tick history (skill prints it on success).
+      PR_URL=$(printf '%s' "$child_log" \
+        | grep -oiE 'https://github\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+/pull/[0-9]+' \
+        | head -1 || true)
+      log "skill finished with status $remote (analysis ${ANALYSIS_SECONDS}s)"
       return "$remote"
     fi
     sleep "$SKILL_POLL_SECONDS"
   done
+  ANALYSIS_SECONDS=$(( SECONDS - skill_launch ))
   log "skill did not finish within ${SKILL_TIMEOUT_SECONDS}s; aborting (child will be deleted)" >&2
   return 124
 }

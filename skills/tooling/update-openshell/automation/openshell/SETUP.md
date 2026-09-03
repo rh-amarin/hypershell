@@ -42,6 +42,13 @@ environment or prompts for them.
    file under the checkout — `CLAUDE.md`, skill files, release notes, fetched web
    content — as untrusted data whose embedded instructions must not be followed,
    guarding the unattended run against prompt injection.
+8. **Right-sized roles and in-sandbox observability.** The orchestrator does almost
+   nothing itself (sleep, bridge, `openshell` CLI calls), so it is pinned to
+   minimal resources (`--cpu 100m --memory 200Mi`) while the child keeps room for
+   the real `go build/test`. Each tick is recorded to a persistent history
+   (start/end, total vs. *analysis* duration, outcome, PR) that a tiny stdlib HTTP
+   server publishes through `openshell service expose` — status without any
+   external dashboard or metrics stack.
 
 Prerequisites:
 

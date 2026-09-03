@@ -81,10 +81,13 @@ COPY --from=bridge-build /out/gwbridge /usr/local/bin/gwbridge
 RUN chmod 0555 /usr/local/bin/gwbridge
 
 # Runner scripts (baked in; not uploaded at runtime for the orchestrator).
-COPY scripts/scheduler.sh /opt/updater/scheduler.sh
-COPY scripts/run-tick.sh  /opt/updater/run-tick.sh
-COPY scripts/run-skill.sh /opt/updater/run-skill.sh
-RUN chmod 0555 /opt/updater/*.sh
+COPY scripts/scheduler.sh     /opt/updater/scheduler.sh
+COPY scripts/run-tick.sh      /opt/updater/run-tick.sh
+COPY scripts/run-skill.sh     /opt/updater/run-skill.sh
+# Dependency-free (python3 stdlib) status endpoint the scheduler starts to serve
+# the tick history over a loopback port (published via `openshell service expose`).
+COPY scripts/status-server.py /opt/updater/status-server.py
+RUN chmod 0555 /opt/updater/*.sh /opt/updater/status-server.py
 
 # Child sandbox policy, baked at the path run-tick.sh passes to `sandbox create`.
 # One image serves both roles, so the orchestrator carries the child's policy too.
