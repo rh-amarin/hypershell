@@ -2620,7 +2620,7 @@ func reconcileCertManagerResources(ctx context.Context, dynamicClient dynamic.In
 
 	// The client certificate is NOT for external-client mTLS (external clients
 	// authenticate via OIDC over the Route). It exists so sandbox runners can
-	// verify the gateway's TLS server cert: openshell 0.0.109's Kubernetes driver
+	// verify the gateway's TLS server cert: openshell 0.0.111's Kubernetes driver
 	// mounts this secret into every sandbox and sets OPENSHELL_TLS_CA from its
 	// ca.crt whenever gateway.toml sets client_tls_secret_name. Because it is
 	// issued by the same openshell-ca-issuer as the server cert, its ca.crt

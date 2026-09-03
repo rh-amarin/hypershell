@@ -233,6 +233,40 @@ If a run produced no new lessons, that is itself worth a one-line log entry
 
 Newest first. Each entry: version, date, what happened, what changed in the repo.
 
+- **v0.0.111 (2026-09-03, 0.0.109 -> 0.0.111; automated unattended run):**
+  Clean mechanical bump. Red Hat builds were available for v0.0.110-rhaiv.0 and
+  v0.0.111-rhaiv.0 but not later upstream versions (v0.0.113+), so adopted v0.0.111
+  as the target. Release notes for v0.0.110 and v0.0.111 were mechanically safe:
+  - **v0.0.110** shipped OIDC device authorization grant (additive, doesn't break
+    existing flows), non-root sandbox identity support, and credential driver
+    refresh-token storage (internal implementation change, no external config API
+    impact). The PR #2801 credential driver change stores OAuth refresh tokens and
+    provider credentials through the active driver instead of inline in refresh-state
+    records, but this is an internal storage detail that doesn't change the
+    kubernetes-secrets or vault driver configuration schema HyperShell validates.
+  - **v0.0.111** shipped policy DNS correlation, direct TCP egress, external driver
+    parity, canonical sandbox main process, and OTLP traces for podman - all internal
+    to sandbox execution or compute drivers. No config-schema, Sandbox-API, OIDC, or
+    credential-driver breaks.
+  - **All footprint files updated:** `deploy/base/controller.yaml` (source of truth),
+    `specs/platform/{data-model,openshell-gateway,openshell-gateway-credentials,global-architecture}.spec.md`,
+    `scripts/kind/lib.sh`, `skills/deploy/{ibm-cluster,deploy-cluster,gcp-cluster}/SKILL.md`,
+    `components/pr-test/e2e-openshell-roks.sh`, `deploy/ibm/kustomization.yaml`,
+    `components/control-plane/internal/gateway/reconciler.go` comment,
+    `components/control-plane/manifests/gateway/configmap.yaml` comment.
+  - **Historical validation notes preserved:** The "Validated end to end" notes in
+    `ibm-cluster/SKILL.md` (line 17, 2026-08-19 with 0.0.109) and
+    `gcp-cluster/SKILL.md` (line 16, line 503) were left as historical records.
+  - **Go build, vet, test all passed.** `make check` failed on the dependency-age
+    step due to transient npm registry connectivity (HTTP 403 errors fetching package
+    metadata), unrelated to the OpenShell update. The critical checks (forbidden
+    terms, dependency pins, CI components) all passed, and the Go toolchain checks
+    confirm the version bump is sound.
+  - **v1beta1 still holds:** Upstream release notes show no Sandbox API version bump;
+    the `v1beta1` claim in `global-architecture.spec.md` and `ibm-cluster/SKILL.md`
+    remains valid (unverified against the running 0.0.111 image, but no breaking
+    change observed in the notes).
+
 - **v0.0.109 (2026-08-19, second run, 0.0.106 -> 0.0.109; validated on ROKS):**
   Unlike 106, this bump was NOT config-schema-neutral - three regressions only
   surfaced running the full ROKS e2e (`components/pr-test/e2e-openshell-roks.sh`),
