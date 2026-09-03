@@ -13,7 +13,7 @@ Deploys HyperShell to an OpenShift Dedicated (OSD) cluster running on GCP as a
 Cloud Hub with full OIDC security via Keycloak, CNPG-managed databases, and
 per-gateway console provisioning.
 
-> **Validated end to end (2026-08-21, `hypershell-gcp`, openshell 0.0.109):**
+> **Validated end to end (2026-08-21, `hypershell-gcp`, openshell 0.0.113):**
 > Full stack deployed with OIDC: Keycloak realm, JWT-authenticated API,
 > CNPG database cluster, tenant gateway with per-gateway OIDC console, TLS
 > verified via passthrough Route at
@@ -423,7 +423,7 @@ CLUSTER_ID=$(echo "$CLUSTER" | python3 -c "import json,sys; print(json.load(sys.
 # GatewayRelease
 RELEASE=$(curl -sk -X POST "$API/gateway_releases" -H 'Content-Type: application/json' \
   -H "Authorization: Bearer $TOKEN" \
-  -d "{\"name\":\"openshell-0.0.109\",\"image\":\"quay.io/opendatahub/odh-openshell-gateway:v0.0.109-rhaiv.0\"}")
+  -d "{\"name\":\"openshell-0.0.113\",\"image\":\"quay.io/opendatahub/odh-openshell-gateway:v0.0.113-rhaiv.2\"}")
 RELEASE_ID=$(echo "$RELEASE" | python3 -c "import json,sys; print(json.load(sys.stdin)['id'])")
 
 # ManagedDatabase (provider=cnpg for CNPG-managed provisioning)
@@ -445,7 +445,7 @@ GATEWAY=$(curl -sk -X POST "$API/gateways" -H 'Content-Type: application/json' \
   \"release_id\": \"$RELEASE_ID\",
   \"database_id\": \"$DB_ID\",
   \"namespace\": \"openshell-gcptest\",
-  \"image\": \"quay.io/opendatahub/odh-openshell-gateway:v0.0.109-rhaiv.0\",
+  \"image\": \"quay.io/opendatahub/odh-openshell-gateway:v0.0.113-rhaiv.2\",
   \"route\": \"{\\\"enabled\\\": true}\"
 }")
 echo "$GATEWAY" | python3 -m json.tool
@@ -476,7 +476,7 @@ echo | openssl s_client -connect "$HOST:443" -servername "$HOST" -CAfile /tmp/te
 
 # gRPC transport through the Route
 openshell status --gateway-endpoint "https://$HOST:443" --gateway-insecure
-# Status: Connected, Version: 0.0.109
+# Status: Connected, Version: 0.0.113
 
 # Verify per-gateway OIDC console
 CONSOLE_URL="https://$(oc -n "$NS" get route openshell-console -o jsonpath='{.spec.host}')"
@@ -500,7 +500,7 @@ To create a fresh gateway instead of reusing an existing one:
 bash components/pr-test/e2e-openshell-gcp.sh
 ```
 
-### Reference run (2026-08-21, `angel` gateway, openshell 0.0.109)
+### Reference run (2026-08-21, `angel` gateway, openshell 0.0.113)
 
 ```
 HyperShell OpenShell Gateway End-to-End Test (GCP OSD)
@@ -535,7 +535,7 @@ Results: 23 passed, 0 failed
   ✓ Keycloak admin service account ready (realm: hypershell)
   ✓ Assigned openshell-admin to admin on angel-3IEWSLgFpF3DHsaGxl5IexOrrME
   ✓ Assigned openshell-user to developer on angel-3IEWSLgFpF3DHsaGxl5IexOrrME
-  ✓ Gateway pod ready (quay.io/opendatahub/odh-openshell-gateway:v0.0.109-rhaiv.0)
+  ✓ Gateway pod ready (quay.io/opendatahub/odh-openshell-gateway:v0.0.113-rhaiv.2)
   ✓ Gateway service: 172.30.26.165:8080
   ✓ TLS certificates provisioned
   ✓ CNPG database cluster healthy in openshell-db-913eb1e752d32f24 (phase: Cluster in healthy state)
@@ -543,7 +543,7 @@ Results: 23 passed, 0 failed
   ✓ CA certificate extracted and SSL_CERT_FILE set
   ✓ Passthrough route: gw-openshell-944b372e89b1cb7e.apps.hypershell-gcp.u0zc.p2.openshiftapps.com
   ✓ openshell CLI registered (OIDC mode)
-  ✓ Gateway connected (version: 0.0.109)
+  ✓ Gateway connected (version: 0.0.113)
   ✓ Sandbox pod created: default--e2e-1645 (Running)
   ✓ Sandbox exec: command executed inside sandbox
   ✓ Developer OIDC token acquired (user: developer, roles=openshell-user)
