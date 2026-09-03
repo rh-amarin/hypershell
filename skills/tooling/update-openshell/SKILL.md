@@ -79,6 +79,11 @@ grep -rn  "<OLD_VERSION>" . | grep -v '\.git/'      # must return only intention
 | `specs/platform/openshell-gateway-database.spec.md` | example gateway image refs | **Was pinned to a git SHA, not a semver tag** - normalize to the release tag |
 | `scripts/kind/lib.sh` | `GATEWAY_IMAGE` default | Local Kind |
 | `skills/deploy/ibm-cluster/SKILL.md` | mirror + `openshell gateway add` commands + `v1beta1` API-version note | ROKS mirror docs |
+| `skills/deploy/gcp-cluster/SKILL.md` | validation note + example gateway creation + reference run output | GCP OSD docs (examples + output samples) |
+| `skills/deploy/deploy-cluster/SKILL.md` | example GATEWAY_IMAGE/GATEWAY_SUPERVISOR_IMAGE env var values | Deploy docs |
+| `deploy/ibm/kustomization.yaml` | ROKS overlay GATEWAY_IMAGE, GATEWAY_SUPERVISOR_IMAGE patches | ROKS-specific mirrored image refs |
+| `components/control-plane/internal/gateway/reconciler.go` | version in sandbox client-TLS comment | Inline doc |
+| `components/control-plane/manifests/gateway/configmap.yaml` | version in Combined-topology comment | Inline doc |
 
 **Do NOT change** version strings that are illustrative fixtures or historical
 facts rather than the active pin:
@@ -232,6 +237,37 @@ If a run produced no new lessons, that is itself worth a one-line log entry
 ## Learnings log
 
 Newest first. Each entry: version, date, what happened, what changed in the repo.
+
+- **v0.0.113 (2026-09-03, 0.0.109 -> 0.0.113; clean mechanical bump):**
+  Ranges 110-113 (skipped 112, 114-116 as Red Hat ODH images not yet built) were
+  mechanically safe. Release-note triage against contract surfaces showed:
+  - **v0.0.110**: OIDC device auth (CLI-only), policy changes (credentialed
+    endpoints, non-root sandbox identities), credential driver enhancement (store
+    refresh tokens - internal, does not affect HyperShell's config schema
+    validation). No HyperShell contract impact.
+  - **v0.0.111**: Policy DNS correlation/direct TCP, compute driver refactoring
+    (external parity, compiled drivers, canonical main process), OTLP traces
+    (Podman). Internal upstream improvements, no HyperShell contract impact.
+  - **v0.0.113**: OTLP traces (Docker), corporate CA trust for proxies/TLS,
+    Podman CLI fallback. Internal upstream improvements, no HyperShell contract
+    impact.
+  - **Footprint additions discovered by grep:** `deploy/ibm/kustomization.yaml` +
+    `skills/deploy/deploy-cluster/SKILL.md` both pin gateway/supervisor images
+    and were not in the original footprint table. Added them.
+  - **Image availability constraint:** Only Red Hat ODH images up to
+    `v0.0.113-rhaiv.1` are published; upstream v0.0.114-116 exist but have not
+    been built into `quay.io/opendatahub/odh-openshell-{gateway,supervisor}` yet.
+    Updated to the latest available (`v0.0.113-rhaiv.1`). When 0.0.114+ Red Hat
+    images ship, a follow-up bump can adopt them.
+  - **Build verification limited by network:** Sandbox environment blocks Go
+    module proxy and npm registry access, preventing `go build`/`go vet`/`go test`
+    and the `check-dependency-age` npm metadata lookups. All policy checks that
+    could run (`check-forbidden-terms`, `check-dependency-pins`,
+    `check-ci-components`) passed. Changes are purely mechanical version-string
+    substitutions with no code logic changes, so runtime risk is minimal. The
+    v0.0.109 learnings entry confirmed that 0.0.109's contract (v1beta1 Sandbox
+    API, Combined topology client TLS, workspace membership) is still valid for
+    0.0.113 per the release notes.
 
 - **v0.0.109 (2026-08-19, second run, 0.0.106 -> 0.0.109; validated on ROKS):**
   Unlike 106, this bump was NOT config-schema-neutral - three regressions only
