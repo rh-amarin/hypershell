@@ -384,9 +384,9 @@ secrets are unnecessary):
 skopeo copy --remove-signatures --dest-tls-verify=false --dest-creds "pusher:$(oc -n hypershell create token pusher)" \
   docker://docker.io/library/postgres:18 docker://$REG/openshift/postgres:18
 skopeo copy --dest-tls-verify=false --dest-creds "pusher:$(oc -n hypershell create token pusher)" \
-  docker://quay.io/opendatahub/odh-openshell-gateway:v0.0.109-rhaiv.0@sha256:a80b79e514826e8d57ea137749cf18a6e7f3d92e26bfefe005f3a9c4a55b8bdd    docker://$REG/openshift/openshell-gateway:v0.0.109-rhaiv.0
+  docker://quay.io/opendatahub/odh-openshell-gateway:v0.0.113-rhaiv.1@sha256:dcb57e93f09b9355d1c4e7f7169c688a18fa4a557fb10b47afe622ac99e397e4    docker://$REG/openshift/openshell-gateway:v0.0.113-rhaiv.1
 skopeo copy --dest-tls-verify=false --dest-creds "pusher:$(oc -n hypershell create token pusher)" \
-  docker://quay.io/opendatahub/odh-openshell-supervisor:v0.0.109-rhaiv.0@sha256:96e21135c18bc9f6f4d1dfd0cccae3c91769ef4d87da2e470eca4b56a24b2152 docker://$REG/openshift/openshell-supervisor:v0.0.109-rhaiv.0
+  docker://quay.io/opendatahub/odh-openshell-supervisor:v0.0.113-rhaiv.1@sha256:02092962f5a398f629afcc746f6d5fc4f87afe65cb86b4fd5fce131871125031 docker://$REG/openshift/openshell-supervisor:v0.0.113-rhaiv.1
 oc -n openshift get is    # expect openshell-gateway, openshell-supervisor, postgres
 ```
 
@@ -451,8 +451,8 @@ API="https://$(oc -n hypershell get route hypershell-api -o jsonpath='{.spec.hos
 curl -sk -X POST "$API/gateways" -H 'Content-Type: application/json' -d '{
   "name":"ibm-test-gw","cluster_id":"...","release_id":"...","database_id":"...",
   "namespace":"openshell-ibmtest",
-  "image":"image-registry.openshift-image-registry.svc:5000/openshift/openshell-gateway:0.0.109",
-  "supervisor_image":"image-registry.openshift-image-registry.svc:5000/openshift/openshell-supervisor:0.0.109",
+  "image":"image-registry.openshift-image-registry.svc:5000/openshift/openshell-gateway:0.0.113",
+  "supervisor_image":"image-registry.openshift-image-registry.svc:5000/openshift/openshell-supervisor:0.0.113",
   "route":"{\"enabled\": true}"
 }'
 ```
@@ -521,7 +521,7 @@ plane grants the tenant SA RBAC *against* `agents.x-k8s.io` and mints the
 per-tenant sandbox SA + privileged-SCC binding, but it does **not** install the
 CRD/controller - that is a cluster prerequisite, like cert-manager. Verified on
 `hysh-ibm-01` (2026-08-15) with `agent-sandbox` **v0.5.5** (first line to serve
-`v1beta1`, which gateway 0.0.109 prefers).
+`v1beta1`, which gateway 0.0.113 prefers).
 
 Same ROKS constraint as everything else: the controller image
 (`registry.k8s.io/agent-sandbox/agent-sandbox-controller:v0.5.5`) and the tenant

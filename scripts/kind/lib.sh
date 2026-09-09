@@ -35,7 +35,7 @@ fi
 if [[ "$(basename "${CONTAINER_ENGINE}")" == "podman" ]]; then
   export KIND_EXPERIMENTAL_PROVIDER=podman
 fi
-: "${GATEWAY_IMAGE:=quay.io/opendatahub/odh-openshell-gateway:v0.0.109-rhaiv.0@sha256:a80b79e514826e8d57ea137749cf18a6e7f3d92e26bfefe005f3a9c4a55b8bdd}"
+: "${GATEWAY_IMAGE:=quay.io/opendatahub/odh-openshell-gateway:v0.0.113-rhaiv.1@sha256:dcb57e93f09b9355d1c4e7f7169c688a18fa4a557fb10b47afe622ac99e397e4}"
 : "${KEYCLOAK_HOSTNAME:=keycloak.hypershell.localhost}"
 : "${KEYCLOAK_OIDC_ISSUER:=https://${KEYCLOAK_HOSTNAME}/realms/hypershell}"
 : "${KEYCLOAK_OIDC_CLIENT_ID:=hypershell-frontend}"

@@ -233,6 +233,21 @@ If a run produced no new lessons, that is itself worth a one-line log entry
 
 Newest first. Each entry: version, date, what happened, what changed in the repo.
 
+- **v0.0.113 (2026-09-03, 0.0.109 -> 0.0.113; Red Hat images):**
+  Mechanical bump from v0.0.109-rhaiv.0 to v0.0.113-rhaiv.1 (latest available Red Hat
+  images in quay.io/opendatahub at time of run; upstream v0.0.116 exists but not yet
+  mirrored). Release range 110-113 was contract-neutral: no gateway config schema
+  changes, no Sandbox API version changes, no credential driver interface breaks.
+  Notable upstream additions were additive-only: OTLP tracing for Docker/Podman/K8s
+  drivers, policy DNS correlation, canonical main process, corporate CA trust for
+  intercepted TLS, and Windows MXC driver. No `needs-decision` items surfaced.
+  `make check` passed. Network restrictions prevented `go build`/`go vet`/`go test`
+  execution, but all version pins were verified consistent via grep and the forbidden
+  terms check passed, confirming no spec line-number shifts occurred. Historical
+  references (validation_test.go regex fixture, gcp-cluster/ibm-cluster reference
+  runs, prior learnings log entries) were correctly preserved per the skill's
+  "do not change" list.
+
 - **v0.0.109 (2026-08-19, second run, 0.0.106 -> 0.0.109; validated on ROKS):**
   Unlike 106, this bump was NOT config-schema-neutral - three regressions only
   surfaced running the full ROKS e2e (`components/pr-test/e2e-openshell-roks.sh`),
