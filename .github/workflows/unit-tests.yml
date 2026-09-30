@@ -30,6 +30,9 @@ on:
       gateway_management_ui:
         type: string
         default: 'false'
+      home_page:
+        type: string
+        default: 'false'
       operational_dashboard_ui:
         type: string
         default: 'false'
@@ -52,7 +55,8 @@ jobs:
     if: >-
       inputs.web_console == 'true' ||
       inputs.gateway_management_ui == 'true' ||
-      inputs.operational_dashboard_ui == 'true'
+      inputs.operational_dashboard_ui == 'true' ||
+      inputs.home_page == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:

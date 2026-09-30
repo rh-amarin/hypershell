@@ -88,6 +88,26 @@
     ],
     "unit_tested": true
   },
+  "home_page": {
+    "directory": "components/home-page",
+    "lint_job": "lint-home-page",
+    "paths": [
+      "components/home-page/**",
+      "packages/gateway-management-ui/**",
+      "components/web-console/domain-probes/**",
+      "images/brand/**",
+      "package.json",
+      "pnpm-lock.yaml",
+      "pnpm-workspace.yaml",
+      "Makefile",
+      ".github/component-paths.json",
+      ".github/scripts/detect-components.sh",
+      ".github/workflows/checks.yml",
+      ".github/workflows/unit-tests.yml",
+      ".github/workflows/tests.yml"
+    ],
+    "unit_tested": true
+  },
   "e2e": {
     "directory": "tests/e2e",
     "paths": [

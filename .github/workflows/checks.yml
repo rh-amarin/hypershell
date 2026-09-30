@@ -59,6 +59,7 @@ jobs:
       cli: ${{ steps.detect.outputs.cli }}
       control_plane: ${{ steps.detect.outputs.control_plane }}
       gateway_management_ui: ${{ steps.detect.outputs.gateway_management_ui }}
+      home_page: ${{ steps.detect.outputs.home_page }}
       operational_dashboard_ui: ${{ steps.detect.outputs.operational_dashboard_ui }}
       pr_test: ${{ steps.detect.outputs.pr_test }}
       sdk_go: ${{ steps.detect.outputs.sdk_go }}
@@ -330,6 +331,32 @@ jobs:
           pnpm --filter @openshift-online/hypershell-operational-dashboard-ui run lint
           pnpm --filter @openshift-online/hypershell-operational-dashboard-ui run typecheck
 
+  lint-home-page:
+    name: Public home page quality gates
+    needs: detect-changes
+    if: needs.detect-changes.outputs.home_page == 'true'
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Set up Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version-file: .node-version
+      - name: Install pinned pnpm
+        run: bash scripts/bootstrap_pnpm.sh
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Build domain-probe contracts
+        run: pnpm --filter @openshift-online/hypershell-domain-probes build
+      - name: Run public home page static quality gates
+        run: |
+          pnpm --filter @openshift-online/hypershell-home-page run format:check
+          pnpm --filter @openshift-online/hypershell-home-page run lint
+          pnpm --filter @openshift-online/hypershell-home-page run typecheck
+          pnpm --filter @openshift-online/hypershell-home-page run i18n:check
+          pnpm --filter @openshift-online/hypershell-home-page run build
+
   lint-pr-test:
     name: PR test script validation
     needs: detect-changes
@@ -404,6 +431,7 @@ jobs:
       - lint-sdk-typescript
       - lint-gateway-management-ui
       - lint-operational-dashboard-ui
+      - lint-home-page
       - lint-pr-test
       - lint-web-console
     if: always()

@@ -100,9 +100,17 @@ export function buildOpenShellInstallCommand(
     return undefined;
   }
 
-  const installerVersion = gatewayVersion.startsWith("v")
-    ? gatewayVersion
-    : `v${gatewayVersion}`;
+  return buildOpenShellCliInstallCommand(gatewayVersion);
+}
+
+/**
+ * Builds the OpenShell CLI installation command for an OpenShell version.
+ * This is the canonical command shape shared by the gateway connection steps
+ * and the public home page, so both always pin the CLI the same way.
+ */
+export function buildOpenShellCliInstallCommand(openshellVersion: string) {
+  const version = openshellVersion.trim();
+  const installerVersion = version.startsWith("v") ? version : `v${version}`;
 
   return [
     "curl -LsSf \\",

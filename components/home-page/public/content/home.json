@@ -1,0 +1,140 @@
+{
+  "schemaVersion": 1,
+  "updatedAt": "2026-09-30T09:00:00Z",
+  "contact": {
+    "slackChannel": "forum-hypershell",
+    "slackUrl": "https://slack.com/app_redirect?channel=forum-hypershell"
+  },
+  "links": {
+    "source": "https://github.com/openshift-online/hypershell",
+    "changelog": "https://github.com/openshift-online/hypershell/commits/main"
+  },
+  "instances": [
+    {
+      "id": "ibm-production",
+      "name": "Production",
+      "provider": "IBM Cloud",
+      "description": "The default home for gateways. General-purpose workloads with no special network or data needs.",
+      "consoleUrl": "https://ibm-production.hypershell.invalid",
+      "region": "TBD",
+      "openshellVersion": "v0.1.2-rhaiv.0",
+      "requiresVpn": false,
+      "status": "operational"
+    },
+    {
+      "id": "aws-sandboxes",
+      "name": "Production sandboxes",
+      "provider": "AWS",
+      "description": "For workloads that lean heavily on AWS services or data. Run the gateway next to what it calls.",
+      "consoleUrl": "https://aws-sandboxes.hypershell.invalid",
+      "region": "TBD",
+      "openshellVersion": "v0.1.2-rhaiv.0",
+      "requiresVpn": false,
+      "status": "operational"
+    },
+    {
+      "id": "vpn-production",
+      "name": "Production with VPN",
+      "provider": "Private network",
+      "description": "For gateways that reach GitLab and other Red Hat internal services.",
+      "consoleUrl": "https://vpn-production.hypershell.invalid",
+      "region": "TBD",
+      "openshellVersion": "v0.1.2-rhaiv.0",
+      "requiresVpn": true,
+      "status": "operational"
+    },
+    {
+      "id": "stage",
+      "name": "Stage",
+      "provider": "TBD",
+      "description": "Runs the next OpenShell release before production. Test your gateways and agents here before an upgrade; not for production workloads.",
+      "consoleUrl": "https://stage.hypershell.invalid",
+      "region": "TBD",
+      "openshellVersion": "v0.1.2-rhaiv.0",
+      "requiresVpn": false,
+      "status": "operational"
+    }
+  ],
+  "services": [
+    {
+      "id": "management-api",
+      "name": "Management API",
+      "status": "operational"
+    },
+    { "id": "web-console", "name": "Web console", "status": "operational" }
+  ],
+  "incidents": [],
+  "news": [
+    {
+      "id": "openshell-v0-1-2",
+      "kind": "action-required",
+      "publishedOn": "2026-09-29",
+      "title": "OpenShell v0.1.2 is now the default",
+      "summary": "Install the matching CLI from your instance's card before connecting to new gateways."
+    },
+    {
+      "id": "hsctl-terminal-ui",
+      "kind": "new",
+      "publishedOn": "2026-09-29",
+      "title": "Interactive terminal UI for hsctl",
+      "summary": "Browse and manage your gateways from the terminal."
+    },
+    {
+      "id": "jwt-audience",
+      "kind": "platform",
+      "publishedOn": "2026-09-29",
+      "title": "Management API now enforces the JWT audience",
+      "summary": "Tokens minted for another audience are rejected. Seeing 401s? Refresh your CLI token."
+    }
+  ],
+  "changelog": [
+    {
+      "date": "2026-09-29",
+      "type": "feat",
+      "summary": "Bump OpenShell to v0.1.2",
+      "component": "update-openshell",
+      "pullRequest": 374,
+      "url": "https://github.com/openshift-online/hypershell/pull/374"
+    },
+    {
+      "date": "2026-09-29",
+      "type": "feat",
+      "summary": "Interactive hsctl terminal UI",
+      "component": "cli",
+      "pullRequest": 371,
+      "url": "https://github.com/openshift-online/hypershell/pull/371"
+    },
+    {
+      "date": "2026-09-29",
+      "type": "fix",
+      "summary": "Set gateway resources via Helm values, configurable with GATEWAY_RESOURCES",
+      "component": "control-plane",
+      "pullRequest": 380,
+      "url": "https://github.com/openshift-online/hypershell/pull/380"
+    },
+    {
+      "date": "2026-09-29",
+      "type": "fix",
+      "summary": "Keep provisioning gateways out of Degraded while pods start",
+      "component": "control-plane",
+      "pullRequest": 381,
+      "url": "https://github.com/openshift-online/hypershell/pull/381"
+    },
+    {
+      "date": "2026-09-29",
+      "type": "feat",
+      "summary": "Show API and console build versions in the user menu",
+      "component": "web-console",
+      "pullRequest": 357,
+      "url": "https://github.com/openshift-online/hypershell/pull/357"
+    },
+    {
+      "date": "2026-09-29",
+      "type": "fix",
+      "summary": "Enforce management API JWT audience",
+      "component": "auth",
+      "pullRequest": 182,
+      "url": "https://github.com/openshift-online/hypershell/pull/182"
+    }
+  ]
+}

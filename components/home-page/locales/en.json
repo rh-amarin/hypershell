@@ -1,0 +1,318 @@
+{
+  "home.changelog.change": {
+    "defaultMessage": "Change",
+    "description": "Changelog table column: summary of the change; also the table name."
+  },
+  "home.changelog.component": {
+    "defaultMessage": "Component",
+    "description": "Changelog table column: component the change touches."
+  },
+  "home.changelog.date": {
+    "defaultMessage": "Date",
+    "description": "Changelog table column: date of the change."
+  },
+  "home.changelog.full": {
+    "defaultMessage": "Full changelog",
+    "description": "Link to the full changelog."
+  },
+  "home.changelog.none": {
+    "defaultMessage": "No changes recorded yet.",
+    "description": "Shown when the changelog is empty."
+  },
+  "home.changelog.pullRequest": {
+    "defaultMessage": "Pull request",
+    "description": "Changelog table column: link to the pull request."
+  },
+  "home.changelog.pullRequestLink": {
+    "defaultMessage": "#{number}",
+    "description": "Link text for a pull request; number is the pull request number."
+  },
+  "home.changelog.title": {
+    "defaultMessage": "Changelog",
+    "description": "Heading of the changelog section."
+  },
+  "home.changelog.type": {
+    "defaultMessage": "Type",
+    "description": "Changelog table column: kind of change such as feat or fix."
+  },
+  "home.contact.lead": {
+    "defaultMessage": "Onboarding, access to an instance, questions or something broken. We answer in the channel.",
+    "description": "Sentence under the contact heading."
+  },
+  "home.contact.openInSlack": {
+    "defaultMessage": "Open in Slack",
+    "description": "Button that opens the team Slack channel."
+  },
+  "home.contact.title": {
+    "defaultMessage": "Talk to the team in #{channel}",
+    "description": "Heading of the contact section; channel is the Slack channel name without #."
+  },
+  "home.error.loadFailed": {
+    "defaultMessage": "Status information could not be loaded",
+    "description": "Error title when the status content could not be loaded."
+  },
+  "home.error.loadFailedBody": {
+    "defaultMessage": "Try again in a minute. If it keeps failing, tell us in #{channel}.",
+    "description": "Error body; channel is the Slack channel name without #."
+  },
+  "home.error.retry": {
+    "defaultMessage": "Try again",
+    "description": "Action that retries loading the status content."
+  },
+  "home.error.stale": {
+    "defaultMessage": "Status may be out of date",
+    "description": "Warning title when the latest status refresh failed."
+  },
+  "home.error.staleBody": {
+    "defaultMessage": "The latest refresh failed. Showing the last information we loaded.",
+    "description": "Warning body when the latest status refresh failed."
+  },
+  "home.footer.owner": {
+    "defaultMessage": "HyperShell · Red Hat",
+    "description": "Footer text naming the product and its owner."
+  },
+  "home.footer.source": {
+    "defaultMessage": "Source",
+    "description": "Footer link to the source code repository."
+  },
+  "home.getHelp": {
+    "defaultMessage": "Get help",
+    "description": "Masthead button that jumps to the contact section."
+  },
+  "home.hero.askInSlack": {
+    "defaultMessage": "Ask in #{channel}",
+    "description": "Button that opens the team Slack channel; channel is the channel name without #."
+  },
+  "home.hero.chooseInstance": {
+    "defaultMessage": "Choose an instance",
+    "description": "Primary button that scrolls to the instance list."
+  },
+  "home.hero.eyebrow": {
+    "defaultMessage": "Gateway fleet management",
+    "description": "Short label above the page title describing the product category."
+  },
+  "home.hero.lead": {
+    "defaultMessage": "HyperShell runs OpenShell gateways across clusters and clouds for you. Choose where your workload belongs and you are one login away from a running gateway.",
+    "description": "Introductory paragraph under the page title."
+  },
+  "home.hero.titleLine1": {
+    "defaultMessage": "Pick an instance.",
+    "description": "First line of the page title."
+  },
+  "home.hero.titleLine2": {
+    "defaultMessage": "Ship your sandboxes.",
+    "description": "Second line of the page title."
+  },
+  "home.incidents.activeStarted": {
+    "defaultMessage": "Started {time}",
+    "description": "When an active incident started; time is a formatted date and time."
+  },
+  "home.incidents.activeStartedAffecting": {
+    "defaultMessage": "Started {time}. Affects {instances}.",
+    "description": "When an active incident started and what it affects; time is a formatted date and time, instances is a comma-separated list of names."
+  },
+  "home.incidents.activeTitle": {
+    "defaultMessage": "{phase}: {title}",
+    "description": "Title of an active incident; phase is Investigating, Identified or Monitoring, title is the incident title."
+  },
+  "home.incidents.completedMaintenance": {
+    "defaultMessage": "Maintenance completed",
+    "description": "State of a maintenance window that is over."
+  },
+  "home.incidents.fullHistory": {
+    "defaultMessage": "Full incident history",
+    "description": "Link to the full incident history page."
+  },
+  "home.incidents.none": {
+    "defaultMessage": "No active incidents",
+    "description": "Shown when no incident is in progress."
+  },
+  "home.incidents.nonePast": {
+    "defaultMessage": "No incidents or maintenance recorded recently.",
+    "description": "Shown when there are no recent resolved incidents."
+  },
+  "home.incidents.past": {
+    "defaultMessage": "Past incidents",
+    "description": "Heading of the list of recently resolved incidents and maintenance."
+  },
+  "home.incidents.pastMeta": {
+    "defaultMessage": "{state} {time}",
+    "description": "Details under a past incident; state is Resolved or Maintenance completed, time is a formatted date and time."
+  },
+  "home.incidents.pastMetaAffecting": {
+    "defaultMessage": "{state} {time}. Affected {instances}.",
+    "description": "Details under a past incident; state is Resolved or Maintenance completed, time is a formatted date and time, instances is a comma-separated list of names."
+  },
+  "home.incidents.phase.identified": {
+    "defaultMessage": "Identified",
+    "description": "Incident phase: the cause is known and a fix is in progress."
+  },
+  "home.incidents.phase.investigating": {
+    "defaultMessage": "Investigating",
+    "description": "Incident phase: the team is looking for the cause."
+  },
+  "home.incidents.phase.monitoring": {
+    "defaultMessage": "Monitoring",
+    "description": "Incident phase: a fix is in place and being watched."
+  },
+  "home.incidents.resolvedIncident": {
+    "defaultMessage": "Resolved",
+    "description": "State of an incident that is over."
+  },
+  "home.incidents.title": {
+    "defaultMessage": "Incidents",
+    "description": "Heading of the incidents section."
+  },
+  "home.instances.access": {
+    "defaultMessage": "Access",
+    "description": "Label for how an instance can be reached, such as the public internet or the Red Hat VPN."
+  },
+  "home.instances.accessPublic": {
+    "defaultMessage": "Public internet",
+    "description": "Access value for an instance reachable without a VPN."
+  },
+  "home.instances.cliMatchNotice": {
+    "defaultMessage": "Your OpenShell CLI must match the version of the instance you use. Each instance lists its version and the install command that pins it.",
+    "description": "Notice explaining that the CLI version must match the instance version."
+  },
+  "home.instances.copied": {
+    "defaultMessage": "Copied",
+    "description": "Tooltip shown after the CLI install command was copied."
+  },
+  "home.instances.copy": {
+    "defaultMessage": "Copy command",
+    "description": "Tooltip on the button that copies the CLI install command."
+  },
+  "home.instances.lead": {
+    "defaultMessage": "Same platform, several homes. Pick the one closest to what your gateway talks to.",
+    "description": "Sentence under the public instances heading."
+  },
+  "home.instances.matchingCli": {
+    "defaultMessage": "Install the matching OpenShell CLI",
+    "description": "Label above the copyable CLI install command for an instance."
+  },
+  "home.instances.openConsole": {
+    "defaultMessage": "Open console",
+    "description": "Button that opens the web console of an instance."
+  },
+  "home.instances.openConsoleFor": {
+    "defaultMessage": "Open console for {instance}",
+    "description": "Accessible name of the open console button; instance is the instance name."
+  },
+  "home.instances.openshellVersion": {
+    "defaultMessage": "OpenShell version",
+    "description": "Label for the OpenShell version an instance runs."
+  },
+  "home.instances.region": {
+    "defaultMessage": "Region",
+    "description": "Label for the cloud region an instance runs in."
+  },
+  "home.instances.title": {
+    "defaultMessage": "Public instances",
+    "description": "Heading of the public instances section."
+  },
+  "home.instances.vpnRequired": {
+    "defaultMessage": "Red Hat VPN",
+    "description": "Access value for instances only reachable over the Red Hat VPN."
+  },
+  "home.linkOpensInNewTab": {
+    "defaultMessage": "{name} (opens in a new tab)",
+    "description": "Accessible name of a link that opens a new browser tab; name is the link purpose."
+  },
+  "home.loading": {
+    "defaultMessage": "Loading status information",
+    "description": "Accessible name of the loading spinner."
+  },
+  "home.nav.changelog": {
+    "defaultMessage": "Changelog",
+    "description": "Masthead link to the changelog section."
+  },
+  "home.nav.docs": {
+    "defaultMessage": "Docs",
+    "description": "Masthead link to the external documentation."
+  },
+  "home.nav.incidents": {
+    "defaultMessage": "Incidents",
+    "description": "Masthead link to the incidents section."
+  },
+  "home.nav.instances": {
+    "defaultMessage": "Instances",
+    "description": "Masthead link to the public instances section."
+  },
+  "home.nav.news": {
+    "defaultMessage": "News",
+    "description": "Masthead link to the news section."
+  },
+  "home.news.all": {
+    "defaultMessage": "All news",
+    "description": "Link to the full list of news."
+  },
+  "home.news.kind.actionRequired": {
+    "defaultMessage": "Action needed",
+    "description": "Badge on news that asks users to do something."
+  },
+  "home.news.kind.new": {
+    "defaultMessage": "New",
+    "description": "Badge on news about a new capability."
+  },
+  "home.news.kind.platform": {
+    "defaultMessage": "Platform",
+    "description": "Badge on news about a platform change."
+  },
+  "home.news.none": {
+    "defaultMessage": "No announcements yet.",
+    "description": "Shown when there are no announcements."
+  },
+  "home.news.title": {
+    "defaultMessage": "News & announcements",
+    "description": "Heading of the news and announcements section."
+  },
+  "home.primaryNavigation": {
+    "defaultMessage": "Page sections",
+    "description": "Accessible name of the masthead navigation to page sections."
+  },
+  "home.productName": {
+    "defaultMessage": "HyperShell",
+    "description": "Product name shown in the masthead next to the logo."
+  },
+  "home.skipToContent": {
+    "defaultMessage": "Skip to content",
+    "description": "Skip link that moves keyboard focus to the main content."
+  },
+  "home.status.degraded": {
+    "defaultMessage": "Degraded",
+    "description": "Status label for an instance or service with degraded performance."
+  },
+  "home.status.incidentHistory": {
+    "defaultMessage": "Incident history",
+    "description": "Link to the full incident history page."
+  },
+  "home.status.maintenance": {
+    "defaultMessage": "Maintenance",
+    "description": "Status label for an instance or service under maintenance."
+  },
+  "home.status.openshellVersion": {
+    "defaultMessage": "OpenShell {version}",
+    "description": "OpenShell version an instance runs; version is a release such as v0.1.2."
+  },
+  "home.status.operational": {
+    "defaultMessage": "Operational",
+    "description": "Status label for an instance or service that works normally."
+  },
+  "home.status.outage": {
+    "defaultMessage": "Outage",
+    "description": "Status label for an instance or service that is down."
+  },
+  "home.status.title": {
+    "defaultMessage": "Live status",
+    "description": "Title of the card that summarizes current service status."
+  },
+  "home.status.unknown": {
+    "defaultMessage": "Unknown",
+    "description": "Status label when the status of an instance or service is not known."
+  },
+  "home.status.updatedAt": {
+    "defaultMessage": "Updated {time}",
+    "description": "When the status content was last updated; time is a formatted date and time."
+  }
+}

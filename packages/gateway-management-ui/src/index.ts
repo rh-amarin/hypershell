@@ -74,7 +74,10 @@ export {
   toGatewayConnection,
   type GatewayDisplayStatusCounts,
 } from "./gateways/gateway-data";
-export type { GatewayConnection } from "./gateways/gateway-connections";
+export {
+  buildOpenShellCliInstallCommand,
+  type GatewayConnection,
+} from "./gateways/gateway-connections";
 export {
   GatewayPage,
   GatewaysPage,

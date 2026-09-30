@@ -6,6 +6,7 @@ packages:
   - components/web-console
   - components/web-console/bff
   - components/web-console/domain-probes
+  - components/home-page
 
 registries:
   default: https://registry.npmjs.org/

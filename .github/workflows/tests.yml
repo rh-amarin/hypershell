@@ -77,6 +77,7 @@ jobs:
       control_plane: ${{ steps.detect.outputs.control_plane }}
       e2e: ${{ steps.detect.outputs.e2e }}
       gateway_management_ui: ${{ steps.detect.outputs.gateway_management_ui }}
+      home_page: ${{ steps.detect.outputs.home_page }}
       operational_dashboard_ui: ${{ steps.detect.outputs.operational_dashboard_ui }}
       pr_test: ${{ steps.detect.outputs.pr_test }}
       sdk_go: ${{ steps.detect.outputs.sdk_go }}
@@ -103,6 +104,7 @@ jobs:
       cli: ${{ needs.detect-changes.outputs.cli }}
       control_plane: ${{ needs.detect-changes.outputs.control_plane }}
       gateway_management_ui: ${{ needs.detect-changes.outputs.gateway_management_ui }}
+      home_page: ${{ needs.detect-changes.outputs.home_page }}
       operational_dashboard_ui: ${{ needs.detect-changes.outputs.operational_dashboard_ui }}
       sdk_go: ${{ needs.detect-changes.outputs.sdk_go }}
       sdk_typescript: ${{ needs.detect-changes.outputs.sdk_typescript }}
