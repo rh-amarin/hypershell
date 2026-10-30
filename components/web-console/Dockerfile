@@ -11,6 +11,27 @@ ARG TARGETARCH
 # builds; Konflux pipelines pass the cloned commit.
 ARG GIT_VERSION=unknown
 
+# The terminal panel runs hsctl in the browser as WebAssembly. The output is
+# the same on every architecture, so it builds once with the native toolchain.
+# Go pins match components/cli/Dockerfile; bump them together.
+FROM --platform=linux/amd64 registry.access.redhat.com/hi/go:1.26.7@sha256:2a2215ce496fdd33fdc19739eaadde902f7719c8be222f22f92fd7da02c889cb AS go-amd64
+FROM --platform=linux/arm64 registry.access.redhat.com/hi/go:1.26.7@sha256:ba850dda34c47052bb8db5561c80c43fb08d0f9a729c90fddd755a2d5b46f74b AS go-arm64
+FROM --platform=linux/${BUILDARCH} go-${BUILDARCH} AS hsctl-wasm
+
+WORKDIR /workspace
+COPY components/cli/go.mod components/cli/go.sum ./
+RUN go mod download
+COPY components/cli/cmd/ cmd/
+COPY components/cli/pkg/ pkg/
+COPY components/cli/data/ data/
+# This toolchain turns FIPS mode on by default (GOFIPS140=certified). A FIPS
+# binary reads /proc/sys/crypto/fips_enabled at startup, which a browser does
+# not have, so it exits at once. hsctl's TLS is the browser's own fetch here,
+# so the browser build turns the Go FIPS module off.
+RUN mkdir -p /out \
+  && GOFIPS140=off GOOS=js GOARCH=wasm go build -trimpath -ldflags='-s -w' -o /out/hsctl.wasm ./cmd/hsctl \
+  && cp "$(go env GOROOT)/lib/wasm/wasm_exec.js" /out/wasm_exec.js
+
 FROM --platform=linux/amd64 registry.access.redhat.com/hi/nodejs:24.18.1-builder@sha256:7d3b87dbb6bbf8fc85c865f8a00c5355961dae0e0e4ead15d530af3c8d6e3ebe AS build-amd64
 FROM --platform=linux/arm64 registry.access.redhat.com/hi/nodejs:24.18.1-builder@sha256:5034714f7a4bdd7423231f880b0863b8e69c5aa9b8f5ab69ed1cd1e76760f0e0 AS build-arm64
 FROM --platform=linux/${BUILDARCH} build-${BUILDARCH} AS build
@@ -39,6 +60,7 @@ COPY --chown=${CONTAINER_DEFAULT_USER} packages/gateway-management-ui packages/g
 COPY --chown=${CONTAINER_DEFAULT_USER} packages/operational-dashboard-ui packages/operational-dashboard-ui
 COPY --chown=${CONTAINER_DEFAULT_USER} components/web-console components/web-console
 COPY --chown=${CONTAINER_DEFAULT_USER} images/brand images/brand
+COPY --from=hsctl-wasm --chown=${CONTAINER_DEFAULT_USER} /out/ components/web-console/app/adapters/hsctl/generated/
 
 RUN pnpm run build:web
 

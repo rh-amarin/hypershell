@@ -35,6 +35,30 @@ vi.mock("../../composition/session-composition", () => ({
   },
 }));
 
+const closePanelLabel = "Close panel";
+
+// The terminal panel has its own tests; stand in for it here.
+vi.mock("../terminal/terminal-drawer", () => ({
+  TerminalDrawer: ({
+    children,
+    isExpanded,
+    onClose,
+  }: {
+    children: React.ReactNode;
+    isExpanded: boolean;
+    onClose: () => void;
+  }) => (
+    <>
+      {children}
+      {isExpanded ? (
+        <button onClick={onClose} type="button">
+          {closePanelLabel}
+        </button>
+      ) : null}
+    </>
+  ),
+}));
+
 function RouteContent() {
   const { pathname } = useLocation();
   const { navigation } = useGatewayUi();
@@ -81,6 +105,24 @@ describe("ApplicationShell", () => {
       id: "gateway-b",
       name: "Friendly gateway",
     });
+  });
+
+  it("toggles the terminal panel from the masthead", async () => {
+    const user = userEvent.setup();
+    renderShell();
+
+    const open = screen.getByRole("button", { name: "Open terminal" });
+    expect(open.getAttribute("aria-expanded")).toBe("false");
+    await user.click(open);
+
+    const close = screen.getByRole("button", { name: "Close terminal" });
+    expect(close.getAttribute("aria-expanded")).toBe("true");
+    await user.click(screen.getByRole("button", { name: "Close panel" }));
+    expect(
+      screen
+        .getByRole("button", { name: "Open terminal" })
+        .getAttribute("aria-expanded"),
+    ).toBe("false");
   });
 
   it("provides the focused HyperShell gateway shell", () => {

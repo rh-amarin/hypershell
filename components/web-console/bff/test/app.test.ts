@@ -108,6 +108,12 @@ describe("web-console BFF", () => {
       path.join(staticRoot, "assets", "app-deadbeef.js"),
       'console.log("asset");',
     );
+    await mkdir(path.join(staticRoot, "assets", "hsctl"));
+    // The WebAssembly magic number and version 1: an empty module.
+    await writeFile(
+      path.join(staticRoot, "assets", "hsctl", "hsctl.wasm"),
+      Uint8Array.from([0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00]),
+    );
 
     const config: ServerConfig = {
       apiOrigin: `http://127.0.0.1:${String(address.port)}`,
@@ -170,10 +176,31 @@ describe("web-console BFF", () => {
       expect(response.headers["content-security-policy"], route).not.toContain(
         "upgrade-insecure-requests",
       );
+      // WebAssembly may compile, but JavaScript eval stays blocked.
+      expect(response.headers["content-security-policy"], route).toContain(
+        "'wasm-unsafe-eval'",
+      );
+      expect(response.headers["content-security-policy"], route).not.toContain(
+        "'unsafe-eval'",
+      );
       expect(response.headers["permissions-policy"], route).toContain(
         "camera=()",
       );
     }
+  });
+
+  it("serves the in-browser hsctl as WebAssembly", async () => {
+    // Browsers compile streamed WebAssembly only with this media type.
+    const response = await app.inject({
+      method: "GET",
+      url: "/assets/hsctl/hsctl.wasm?v=unknown",
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.headers["content-type"]).toBe("application/wasm");
+    expect(response.rawPayload.subarray(0, 4)).toEqual(
+      Buffer.from([0x00, 0x61, 0x73, 0x6d]),
+    );
   });
 
   it("injects only the allowlisted runtime config as a head meta tag", async () => {

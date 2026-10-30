@@ -71,6 +71,12 @@ importers:
       '@tanstack/react-query':
         specifier: 5.101.4
         version: 5.101.4(react@19.2.8)
+      '@wterm/dom':
+        specifier: 0.5.4
+        version: 0.5.4
+      '@wterm/react':
+        specifier: 0.5.4
+        version: 0.5.4(@wterm/dom@0.5.4)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       isbot:
         specifier: 5.2.1
         version: 5.2.1
@@ -2349,6 +2355,19 @@ packages:
 
   '@webcontainer/env@1.1.1':
     resolution: {integrity: sha512-6aN99yL695Hi9SuIk1oC88l9o0gmxL1nGWWQ/kNy81HigJ0FoaoTXpytCj6ItzgyCEwA9kF1wixsTuv5cjsgng==}
+
+  '@wterm/core@0.5.4':
+    resolution: {integrity: sha512-yIhbn27ELHDjEDtduDIycHWEEaobJGhqR+WqKgCoSPYReCIrR+skJS67PBk3Wp6+yLImfQ3Fv1CJ4hLXKLa7Fg==}
+
+  '@wterm/dom@0.5.4':
+    resolution: {integrity: sha512-9zxZq52BFpBtVEkBEbZF5a+9dX+eIADQdlTRq6YgGxHP/G/aDXyRja+tebQtAYqx9KY8qJVm20vNOhQxwBe/FQ==}
+
+  '@wterm/react@0.5.4':
+    resolution: {integrity: sha512-6piarasJdCddCQMXIoCTQGKfmzu55XFL6U3sb1xXy/AIqFhO/3cgYC/n5XmCtfg9YBT4RhQjekAjtG8ZJL/KGg==}
+    peerDependencies:
+      '@wterm/dom': 0.5.4
+      react: ^18.0.0 || ^19.0.0
+      react-dom: ^18.0.0 || ^19.0.0
 
   abort-controller@3.0.0:
     resolution: {integrity: sha512-h8lQ8tacZYnR3vNQTgibj+tODHI5/+l06Au2Pcriv/Gmet0eaj4TwWH41sO9wnHDiQsEj19q0drzdWdeAHtweg==}
@@ -6347,6 +6366,18 @@ snapshots:
       tinyrainbow: 3.1.1
 
   '@webcontainer/env@1.1.1': {}
+
+  '@wterm/core@0.5.4': {}
+
+  '@wterm/dom@0.5.4':
+    dependencies:
+      '@wterm/core': 0.5.4
+
+  '@wterm/react@0.5.4(@wterm/dom@0.5.4)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)':
+    dependencies:
+      '@wterm/dom': 0.5.4
+      react: 19.2.8
+      react-dom: 19.2.8(react@19.2.8)
 
   abort-controller@3.0.0:
     dependencies:

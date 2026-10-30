@@ -383,4 +383,16 @@ export const messages = defineMessages({
       "Gateway phase metrics dashboard showing running, provisioning, degraded, and failed gateway counts.",
     description: "Browser metadata description for the gateway metrics page.",
   },
+  openTerminal: {
+    id: "app.terminal.open",
+    defaultMessage: "Open terminal",
+    description:
+      "Accessible label for the masthead button that opens the hsctl terminal panel.",
+  },
+  closeTerminal: {
+    id: "app.terminal.close",
+    defaultMessage: "Close terminal",
+    description:
+      "Accessible label for the masthead button while the terminal panel is open.",
+  },
 });

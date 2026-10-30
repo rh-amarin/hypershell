@@ -371,7 +371,10 @@ export async function buildApp(
         frameAncestors: ["'none'"],
         imgSrc: ["'self'", "data:"],
         objectSrc: ["'none'"],
-        scriptSrc: ["'self'", ...scriptHashes],
+        // 'wasm-unsafe-eval' lets same-origin scripts compile WebAssembly: the
+        // terminal emulator and the in-browser hsctl. It does not allow eval()
+        // or new Function().
+        scriptSrc: ["'self'", "'wasm-unsafe-eval'", ...scriptHashes],
         styleSrc: ["'self'", ...styleHashes],
         styleSrcAttr: ["'none'"],
         // The BFF serves plain HTTP behind the deployment TLS terminator.

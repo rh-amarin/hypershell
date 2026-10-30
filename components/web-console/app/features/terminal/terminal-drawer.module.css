@@ -1,0 +1,29 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+}
+
+/* A resizable panel wraps its content in panel-main. Let it shrink to the
+   panel height, so the terminal fits instead of overflowing. */
+.panel :global(.pf-v6-c-drawer__panel-main) {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-block-size: 0;
+}
+
+.head {
+  flex: none;
+  padding-block: var(--pf-t--global--spacer--sm);
+}
+
+.body {
+  flex: 1 1 auto;
+  min-block-size: 0;
+  padding-block-start: 0;
+}
+
+.slot,
+.host {
+  block-size: 100%;
+}

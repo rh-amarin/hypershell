@@ -2875,6 +2875,74 @@
     "defaultMessage": "results",
     "description": "Context announced after a filtered collection result count."
   },
+  "app.terminal.ariaLabel": {
+    "defaultMessage": "hsctl terminal",
+    "description": "Accessible label for the terminal input area."
+  },
+  "app.terminal.banner": {
+    "defaultMessage": "hsctl {version} is running in your browser. Type 'help' for the commands.",
+    "description": "First line printed in the terminal. Keep 'help' untranslated; it is a command name."
+  },
+  "app.terminal.close": {
+    "defaultMessage": "Close terminal",
+    "description": "Accessible label for the masthead button while the terminal panel is open."
+  },
+  "app.terminal.failed.title": {
+    "defaultMessage": "hsctl could not start",
+    "description": "Alert title shown when the hsctl program fails to start."
+  },
+  "app.terminal.help.clear": {
+    "defaultMessage": "Clear the screen",
+    "description": "Help line for the 'clear' command."
+  },
+  "app.terminal.help.hsctl": {
+    "defaultMessage": "Show hsctl help",
+    "description": "Help line for 'hsctl help'."
+  },
+  "app.terminal.help.run": {
+    "defaultMessage": "Run hsctl, for example: hsctl list gateways",
+    "description": "Help line for 'hsctl ...'. Keep the example command untranslated."
+  },
+  "app.terminal.help.session": {
+    "defaultMessage": "Your console session signs every request. login, logout, config and whoami are not available here.",
+    "description": "Help note on authentication. Keep the command names untranslated."
+  },
+  "app.terminal.help.title": {
+    "defaultMessage": "Commands:",
+    "description": "Heading of the help printed by the terminal 'help' command."
+  },
+  "app.terminal.loading": {
+    "defaultMessage": "Loading hsctl",
+    "description": "Status shown while the hsctl program downloads and starts."
+  },
+  "app.terminal.notFound": {
+    "defaultMessage": "{command}: command not found. Only hsctl commands run here. Type 'help'.",
+    "description": "Printed when the user types a command other than hsctl."
+  },
+  "app.terminal.open": {
+    "defaultMessage": "Open terminal",
+    "description": "Accessible label for the masthead button that opens the hsctl terminal panel."
+  },
+  "app.terminal.panel.close": {
+    "defaultMessage": "Close the terminal panel",
+    "description": "Accessible label for the button that closes the panel."
+  },
+  "app.terminal.panel.resize": {
+    "defaultMessage": "Resize the terminal panel",
+    "description": "Accessible label for the handle that changes the terminal panel height."
+  },
+  "app.terminal.panel.title": {
+    "defaultMessage": "Terminal",
+    "description": "Heading of the bottom panel that holds the hsctl terminal."
+  },
+  "app.terminal.unavailable.title": {
+    "defaultMessage": "The terminal is not available in this console build",
+    "description": "Alert title shown when the console was built without the hsctl program."
+  },
+  "app.terminal.unclosedQuote": {
+    "defaultMessage": "The command has a quote that is not closed.",
+    "description": "Printed when a command line has an unmatched quote."
+  },
   "app.toggleDarkMode.off": {
     "defaultMessage": "Switch to dark mode",
     "description": "Accessible label for the color scheme toggle when light mode is active."

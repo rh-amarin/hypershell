@@ -1,9 +1,6 @@
 package main
 
 import (
-	"fmt"
-	"os"
-
 	"github.com/spf13/cobra"
 
 	"github.com/openshift-online/hypershell/components/cli/cmd/hsctl/apply"
@@ -19,7 +16,6 @@ import (
 	listgatewayaccess "github.com/openshift-online/hypershell/components/cli/cmd/hsctl/list/gatewayAccess"
 	listserviceaccounts "github.com/openshift-online/hypershell/components/cli/cmd/hsctl/list/serviceAccounts"
 	"github.com/openshift-online/hypershell/components/cli/cmd/hsctl/revoke"
-	tuicmd "github.com/openshift-online/hypershell/components/cli/cmd/hsctl/tui"
 	"github.com/openshift-online/hypershell/components/cli/cmd/hsctl/update"
 	updategatewayaccess "github.com/openshift-online/hypershell/components/cli/cmd/hsctl/update/gatewayAccess"
 	updateserviceaccount "github.com/openshift-online/hypershell/components/cli/cmd/hsctl/update/serviceAccount"
@@ -55,19 +51,8 @@ func init() {
 	// update, version and whoami.
 	addGeneratedCommands(root)
 
-	// Hand-written commands.
+	// Hand-written commands. The terminal UI is registered only in the native
+	// build (main_native.go), because it needs a real terminal.
 	root.AddCommand(apply.Cmd)
 	root.AddCommand(revoke.Cmd)
-	root.AddCommand(tuicmd.Cmd)
-}
-
-func main() {
-	root.SetArgs(os.Args[1:])
-	err := root.Execute()
-	if err == nil {
-		os.Exit(0)
-	}
-
-	fmt.Fprintf(os.Stderr, "Error: %s\n", err)
-	os.Exit(1)
 }

@@ -4,6 +4,7 @@ coverage
 domain-probes
 node_modules
 playwright-report
+app/adapters/hsctl/generated
 storybook-static
 test-results
 bff/dist

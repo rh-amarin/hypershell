@@ -13,7 +13,7 @@ import {
   ToolbarContent,
   ToolbarItem,
 } from "@patternfly/react-core";
-import { MoonIcon, SunIcon } from "@patternfly/react-icons";
+import { MoonIcon, SunIcon, TerminalIcon } from "@patternfly/react-icons";
 import {
   gatewayMessages,
   gatewayQueryKey,
@@ -25,12 +25,14 @@ import {
   type DashboardUiNavigation,
 } from "@openshift-online/hypershell-operational-dashboard-ui";
 import { useQuery } from "@tanstack/react-query";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 import { Link, Outlet, useLocation, useNavigate } from "react-router";
 
 import { dashboardOperations } from "../../composition/dashboard-composition";
 import { gatewayOperations } from "../../composition/gateway-composition";
+import { hsctlRunner } from "../../composition/terminal-composition";
+import { TerminalDrawer } from "../terminal/terminal-drawer";
 import { hasDashboardAdminRole } from "../../lib/session-roles";
 import { messages } from "../../i18n/messages";
 import productLogo from "../../../../../images/brand/logo.png";
@@ -73,6 +75,7 @@ export function ApplicationShell() {
     [session?.user?.preferredUsername],
   );
   const { scheme, toggle: toggleColorScheme } = useColorScheme();
+  const [terminalOpen, setTerminalOpen] = useState(false);
   useRouteHeadingFocus(pathname);
   const segments = pathname.split("/").filter(Boolean);
   const gatewaySegment = segments[0] === "gateways" ? segments[1] : undefined;
@@ -114,6 +117,20 @@ export function ApplicationShell() {
         <Toolbar isStatic>
           <ToolbarContent>
             <ToolbarItem align={{ default: "alignEnd" }}>
+              <Button
+                aria-expanded={terminalOpen}
+                aria-label={intl.formatMessage(
+                  terminalOpen ? messages.closeTerminal : messages.openTerminal,
+                )}
+                icon={<TerminalIcon />}
+                isClicked={terminalOpen}
+                onClick={() => {
+                  setTerminalOpen((open) => !open);
+                }}
+                variant="plain"
+              />
+            </ToolbarItem>
+            <ToolbarItem>
               <Button
                 aria-label={intl.formatMessage(
                   scheme === "dark"
@@ -174,7 +191,15 @@ export function ApplicationShell() {
           masthead={masthead}
           skipToContent={skipToContent}
         >
-          <Outlet />
+          <TerminalDrawer
+            isExpanded={terminalOpen}
+            onClose={() => {
+              setTerminalOpen(false);
+            }}
+            runner={hsctlRunner}
+          >
+            <Outlet />
+          </TerminalDrawer>
         </Page>
       </GatewayUiProvider>
     </DashboardUiProvider>
